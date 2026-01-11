@@ -1,0 +1,19 @@
+# Node
+node_modules/
+.next/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+*\backend\src\.env
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Tests

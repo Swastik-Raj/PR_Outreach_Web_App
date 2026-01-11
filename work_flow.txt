@@ -1,0 +1,63 @@
+Project work flow:
+
+User creates PR Campaign
+        ↓
+Search & scrape journalists
+        ↓
+Extract emails + articles
+        ↓
+Generate personalized emails
+        ↓
+Review / approve emails
+        ↓
+Send via Email API
+        ↓
+Track delivery & responses
+
+api flow:
+
+Frontend → Backend → DB (Demo: JSON File)
+Backend → Scraper (journalists/articles)
+Backend → AI → Personalized Email (Logged Not Send for Demo)
+Backend → Email API → Journalist
+
+Email Scrapping:
+Article URL
+   ↓
+Find Author Page
+   ↓
+Scan HTML for email patterns
+   ↓
+If none found → try Contact/About page
+   ↓
+If still none → fallback to email-finder API
+
+Overall Pipeline:
+
+Topic
+ ↓
+Search engine (news/articles)
+ ↓
+Article URLs
+ ↓
+Scrape journalist + article data
+ ↓
+Extract public email
+ ↓
+Generate personalized email (AI)
+ ↓
+Store & send
+
+Data Flow:
+
+Topic
+ ↓
+Google News RSS ( Really Simple Syndication ) → REAL articles
+ ↓
+Extract author + publication
+ ↓
+Generate SAFE demo email address
+ ↓
+AI writes personalized email
+ ↓
+Email is logged / printed (not sent)
