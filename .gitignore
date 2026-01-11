@@ -15,5 +15,5 @@ __pycache__/
 
 # OS
 .DS_Store
-
+backend/keys/
 # Tests
