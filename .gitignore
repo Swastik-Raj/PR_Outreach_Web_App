@@ -19,3 +19,4 @@ backend/keys/
 # Tests
 backend/src/data.json
 backend/data.json
+#Data file too large
