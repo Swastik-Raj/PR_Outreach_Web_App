@@ -17,3 +17,5 @@ __pycache__/
 .DS_Store
 backend/keys/
 # Tests
+backend/src/data.json
+backend/data.json
