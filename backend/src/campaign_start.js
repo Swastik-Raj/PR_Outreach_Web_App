@@ -4,7 +4,7 @@ import fs from "fs";
 // Mock request and response objects
 const req = {
   body: {
-    company: "Drumm",
+    company: "Dumroo.ai",
     topic: "AI Teaching Tools"
   }
 };
