@@ -133,7 +133,7 @@ All emails include tracking pixels and webhook integration for:
 curl -X POST http://localhost:5000/start-campaign \
   -H "Content-Type: application/json" \
   -d '{
-    "company": "Drumm",
+    "company": "Dumroo.ai",
     "topic": "AI Teaching Tools",
     "senderName": "Sarah Johnson",
     "senderTitle": "Communications Director"
