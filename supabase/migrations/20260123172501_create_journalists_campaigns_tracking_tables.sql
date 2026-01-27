@@ -79,9 +79,11 @@ CREATE TABLE IF NOT EXISTS campaigns (
   opened_count integer DEFAULT 0,
   clicked_count integer DEFAULT 0,
   bounced_count integer DEFAULT 0,
+  blocked_count integer DEFAULT 0,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
+
 
 -- Create emails table
 CREATE TABLE IF NOT EXISTS emails (
@@ -97,6 +99,7 @@ CREATE TABLE IF NOT EXISTS emails (
   opened_at timestamptz,
   clicked_at timestamptz,
   bounced_at timestamptz,
+  blocked_at timestamptz,
   error_message text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
