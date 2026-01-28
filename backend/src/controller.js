@@ -1,22 +1,19 @@
-import { generatePersonalizedEmail } from "./ai.service.js";
+import fetch from "node-fetch";
 import {
   upsertJournalist,
   createCampaign,
   createEmailRecord,
-  updateCampaignStats
+  updateCampaignStats,
+  getCampaignEmails,
+  getSupabaseClient
 } from "./supabase.js";
+import { generatePersonalizedEmail } from "./ai.service.js";
 import { rateLimiter } from "./rateLimiter.service.js";
 
 export const startCampaign = async (req, res) => {
-  const {
-    company,
-    topic,
-    senderName = "PR Team",
-    senderTitle = "Communications"
-  } = req.body;
+  const { company, topic, senderName = "PR Team", senderTitle = "Communications" } = req.body;
 
   try {
-    // Fetch journalists from scraper service
     const scraperRes = await fetch(
       `${process.env.SCRAPER_SERVICE_URL}/scrape?topic=${encodeURIComponent(topic)}`
     );
@@ -26,25 +23,22 @@ export const startCampaign = async (req, res) => {
     }
 
     const journalists = await scraperRes.json();
-
     if (!journalists.length) {
       return res.status(404).json({ error: "No journalists found" });
     }
 
-    // Create campaign
     const campaign = await createCampaign(company, topic);
-    let queuedCount = 0;
 
-    // Process journalists
+    let queued = 0;
+
     for (const j of journalists) {
       const journalist = await upsertJournalist(j);
       const article = journalist.recent_articles?.[0];
 
       const emailBody = await generatePersonalizedEmail({
-        journalistName:
-          `${journalist.first_name} ${journalist.last_name}`.trim() || "there",
-        publication: journalist.publication_name || "your publication",
-        articleTitle: article?.title || "your recent article",
+        journalistName: `${journalist.first_name} ${journalist.last_name}`.trim(),
+        publication: journalist.publication_name,
+        articleTitle: article?.title,
         topic,
         company,
         senderName,
@@ -66,23 +60,45 @@ export const startCampaign = async (req, res) => {
         campaignId: campaign.id
       });
 
-      queuedCount++;
+      queued++;
     }
 
-    // Update campaign stats
     await updateCampaignStats(campaign.id, {
-      total_emails: queuedCount,
-      sent_count: queuedCount
+      total_emails: queued,
+      sent_count: queued
     });
 
     res.json({
       success: true,
       campaignId: campaign.id,
-      queued: queuedCount
+      queued
     });
 
-  } catch (err) {
-    console.error("Campaign start failed:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Campaign error:", error);
+    res.status(500).json({ error: error.message });
   }
+};
+
+export const getCampaigns = async (req, res) => {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("campaigns")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ campaigns: data });
+};
+
+export const getCampaignDetails = async (req, res) => {
+  const { campaignId } = req.params;
+  const emails = await getCampaignEmails(campaignId);
+  res.json({ emails });
+};
+
+export const getRateLimiterStatus = (req, res) => {
+  res.json(rateLimiter.getStatus());
 };
