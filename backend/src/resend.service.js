@@ -23,19 +23,23 @@ export async function sendEmailWithTracking(to, subject, html, emailId) {
 
   const trackedHtml = html + trackingPixel + unsubscribeLink;
 
-  // DEV MODE
+  // DEV MODE - Store the complete email with tracking for testing
   if (!EMAIL_ENABLED) {
-    console.log("[DEV MODE] Email sending disabled");
-    console.log({ to, subject });
+    console.log("[DEV MODE] Email sending disabled - storing in database for review");
+    console.log({ to, subject, emailId });
 
+    // Save the complete HTML (with tracking pixel and unsubscribe link) to database
     await supabase
       .from("emails")
       .update({
+        body: trackedHtml,
         status: "sent",
         sent_at: new Date().toISOString(),
         resend_email_id: "dev-mode"
       })
       .eq("id", emailId);
+
+    console.log(`✓ Email stored in database with tracking. View in Supabase: emails table, id=${emailId}`);
 
     return { success: true, devMode: true, emailId };
   }

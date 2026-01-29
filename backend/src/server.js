@@ -5,7 +5,8 @@ import {
   getRateLimiterStatus,
   getCampaigns,
   getCampaignDetails,
-  generateEmail
+  generateEmail,
+  previewEmail
 } from "./controller.js";
 import {
   trackEmailOpen,
@@ -45,6 +46,9 @@ app.get("/campaigns/:campaignId/analytics", getCampaignAnalytics);
 
 // Email generation
 app.post("/generate-email", generateEmail);
+
+// Email preview (for testing in dev mode)
+app.get("/preview-email/:emailId", previewEmail);
 
 // Rate limiter status
 app.get("/rate-limiter/status", getRateLimiterStatus);
