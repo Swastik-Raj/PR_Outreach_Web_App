@@ -151,6 +151,7 @@ The app will be available at `http://localhost:5173`
 
 ```bash
 npm run build
+npm install
 npm run preview
 ```
 
