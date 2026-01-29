@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS journalists (
   state text DEFAULT '',
   country text DEFAULT '',
   publication_name text DEFAULT '',
+  email_confidence integer DEFAULT 0,
+  email_source text DEFAULT 'hunter',
   topics text[] DEFAULT ARRAY[]::text[],
   recent_articles jsonb DEFAULT '[]'::jsonb,
   created_at timestamptz DEFAULT now(),

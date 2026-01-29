@@ -9,6 +9,7 @@ import {
 } from "./supabase.js";
 import { generatePersonalizedEmail } from "./ai.service.js";
 import { rateLimiter } from "./rateLimiter.service.js";
+import { findJournalistEmail } from "./enrichment/hunter.service.js";
 
 export const startCampaign = async (req, res) => {
   const { company, topic, senderName = "PR Team", senderTitle = "Communications" } = req.body;
@@ -32,10 +33,32 @@ export const startCampaign = async (req, res) => {
     let queued = 0;
 
     for (const j of journalists) {
-      const journalist = await upsertJournalist(j);
-      const article = journalist.recent_articles?.[0];
+        const emailData = await findJournalistEmail({
+        firstName: j.first_name,
+        lastName: j.last_name,
+        domain: j.publication_domain
+    });
 
-      const emailBody = await generatePersonalizedEmail({
+    // Skip if no verified email
+    if (!emailData?.email || emailData.confidence < 70) {
+        console.log(
+        `Skipping ${j.first_name} ${j.last_name} — no verified email`
+        );
+        continue;
+    }
+
+    // Store journalist WITH verified email
+    const journalist = await upsertJournalist({
+        ...j,
+        email: emailData.email,
+        email_confidence: emailData.confidence,
+        email_source: emailData.source
+    });
+
+    const article = journalist.recent_articles?.[0];
+
+    // Generate AI email
+    const emailBody = await generatePersonalizedEmail({
         journalistName: `${journalist.first_name} ${journalist.last_name}`.trim(),
         publication: journalist.publication_name,
         articleTitle: article?.title,
@@ -43,25 +66,27 @@ export const startCampaign = async (req, res) => {
         company,
         senderName,
         senderTitle
-      });
+    });
 
-      const email = await createEmailRecord(
+    // Create email DB record
+    const email = await createEmailRecord(
         campaign.id,
         journalist.id,
         `Story idea: ${topic}`,
         emailBody
-      );
+    );
 
-      await rateLimiter.queueEmail({
+    // Queue email
+    await rateLimiter.queueEmail({
         to: journalist.email,
         subject: `Story idea: ${topic}`,
         html: emailBody,
         emailId: email.id,
         campaignId: campaign.id
-      });
+    });
+    queued++;
+}
 
-      queued++;
-    }
 
     await updateCampaignStats(campaign.id, {
       total_emails: queued,
