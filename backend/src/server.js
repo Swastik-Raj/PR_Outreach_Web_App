@@ -53,6 +53,9 @@ app.get("/rate-limiter/status", getRateLimiterStatus);
 app.get("/track/open/:emailId", trackEmailOpen);
 app.get("/track/click/:emailId", trackEmailClick);
 
+// Unsubscribe route
+app.get("/unsubscribe/:emailId", unsubscribe);
+
 // Resend webhook
 app.post("/webhooks/resend", handleResendWebhook);
 

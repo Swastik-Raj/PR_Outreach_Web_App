@@ -10,6 +10,19 @@ const resend = EMAIL_ENABLED
 export async function sendEmailWithTracking(to, subject, html, emailId) {
   const supabase = getSupabaseClient();
 
+  // Add tracking pixel and unsubscribe link
+  const trackingPixel = `<img src="${process.env.BACKEND_URL}/track/open/${emailId}" width="1" height="1" style="display:none;" />`;
+
+  const unsubscribeLink = `
+  <p style="font-size:12px;color:#888;margin-top:20px;">
+    <a href="${process.env.BACKEND_URL}/unsubscribe/${emailId}" style="color:#888;">
+      Unsubscribe
+    </a>
+  </p>
+`;
+
+  const trackedHtml = html + trackingPixel + unsubscribeLink;
+
   // DEV MODE
   if (!EMAIL_ENABLED) {
     console.log("[DEV MODE] Email sending disabled");
@@ -32,7 +45,7 @@ export async function sendEmailWithTracking(to, subject, html, emailId) {
     from: process.env.FROM_EMAIL,
     to,
     subject,
-    html
+    html: trackedHtml
   });
 
   await supabase
@@ -43,16 +56,6 @@ export async function sendEmailWithTracking(to, subject, html, emailId) {
       sent_at: new Date().toISOString()
     })
     .eq("id", emailId);
-
-  const unsubscribeLink = `
-  <p style="font-size:12px;color:#888;">
-    <a href="${process.env.BACKEND_URL}/unsubscribe/${emailId}">
-      Unsubscribe
-    </a>
-  </p>
-`;
-
-const trackedHtml = html + trackingPixel + unsubscribeLink;
 
   return { success: true, emailId };
 }

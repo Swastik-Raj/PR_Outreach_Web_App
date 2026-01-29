@@ -47,40 +47,34 @@ class APIClient {
     return this.request('DELETE', endpoint);
   }
 
-  async startScraper(company, jobTitles = []) {
-    return this.post('/campaigns/start-scraper', { company, jobTitles });
+  // Start a new campaign (scrapes, generates emails, and queues for sending)
+  async startCampaign(company, topic) {
+    return this.post('/start-campaign', { company, topic });
   }
 
-  async getScraperStatus(campaignId) {
-    return this.get(`/campaigns/${campaignId}/scraper-status`);
+  // Get all campaigns
+  async getCampaigns() {
+    return this.get('/campaigns');
   }
 
-  async uploadEmailList(campaignId, emails) {
-    return this.post(`/campaigns/${campaignId}/upload-emails`, { emails });
+  // Get campaign details with emails
+  async getCampaignDetails(campaignId) {
+    return this.get(`/campaigns/${campaignId}`);
   }
 
-  async generateEmails(campaignId, companyInfo, tone = 'professional') {
-    return this.post(`/campaigns/${campaignId}/generate-emails`, { companyInfo, tone });
-  }
-
-  async sendCampaign(campaignId) {
-    return this.post(`/campaigns/${campaignId}/send`, {});
-  }
-
+  // Get campaign analytics
   async getCampaignAnalytics(campaignId) {
     return this.get(`/campaigns/${campaignId}/analytics`);
   }
 
-  async getResponses(campaignId) {
-    return this.get(`/campaigns/${campaignId}/responses`);
+  // Generate a single email (for preview/testing)
+  async generateEmail(data) {
+    return this.post('/generate-email', data);
   }
 
-  async markAsResponded(campaignId, emailId) {
-    return this.put(`/campaigns/${campaignId}/emails/${emailId}/respond`, {});
-  }
-
-  async getQueueStatus() {
-    return this.get('/queue/status');
+  // Get rate limiter queue status
+  async getRateLimiterStatus() {
+    return this.get('/rate-limiter/status');
   }
 }
 

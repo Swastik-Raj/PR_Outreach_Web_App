@@ -137,20 +137,28 @@ class RateLimiter {
     const result = await sendEmailWithTracking(to, subject, html, emailId);
 
     if (result.success) {
-      // Update campaign sent count
+      // Update campaign sent count and check if complete
       const supabase = getSupabaseClient();
       const { data: campaign } = await supabase
         .from('campaigns')
-        .select('sent_count')
+        .select('sent_count, total_emails')
         .eq('id', campaignId)
         .single();
 
       if (campaign) {
+        const newSentCount = (campaign.sent_count || 0) + 1;
+        const updates = {
+          sent_count: newSentCount
+        };
+
+        // Mark campaign as complete if all emails sent
+        if (newSentCount >= campaign.total_emails) {
+          updates.status = 'completed';
+        }
+
         await supabase
           .from('campaigns')
-          .update({
-            sent_count: (campaign.sent_count || 0) + 1
-          })
+          .update(updates)
           .eq('id', campaignId);
       }
     }

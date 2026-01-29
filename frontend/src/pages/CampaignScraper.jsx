@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Play, AlertCircle, Loader } from 'lucide-react';
+import { Play, AlertCircle, Loader, CheckCircle } from 'lucide-react';
+import { api } from '../lib/api';
 import './CampaignScraper.css';
 
 export default function CampaignScraper() {
@@ -8,60 +9,37 @@ export default function CampaignScraper() {
   const [topic, setTopic] = useState('');
   const [geography, setGeography] = useState('');
   const [scraping, setScraping] = useState(false);
-  const [results, setResults] = useState([]);
+  const [campaignCreated, setCampaignCreated] = useState(null);
   const [error, setError] = useState(null);
-  const [selectedContacts, setSelectedContacts] = useState(new Set());
 
   async function handleRunScraper() {
     setError(null);
     setScraping(true);
+    setCampaignCreated(null);
 
     try {
       if (!campaignName.trim() || !topic.trim()) {
         throw new Error('Campaign name and topic are required');
       }
 
-      // TODO: Call backend scraper API
-      // const data = await fetch('/api/scraper/run', {...})
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call backend to start campaign (scrapes, generates emails, queues for sending)
+      const response = await api.startCampaign(campaignName, topic);
 
-      setResults([
-        {
-          id: '1',
-          name: 'Jane Doe',
-          email: 'jane@publication.com',
-          publication: 'Tech News Daily',
-          location: 'San Francisco, CA',
-          topicMatch: 95,
-          status: 'new',
-        },
-        {
-          id: '2',
-          name: 'John Smith',
-          email: 'john@media.com',
-          publication: 'Education Weekly',
-          location: 'New York, NY',
-          topicMatch: 88,
-          status: 'new',
-        },
-      ]);
+      if (response.success) {
+        setCampaignCreated({
+          id: response.campaignId,
+          emailsQueued: response.queued,
+          name: campaignName,
+          topic: topic
+        });
+      } else {
+        throw new Error('Campaign creation failed');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setScraping(false);
     }
-  }
-
-  function toggleContactSelection(id) {
-    setSelectedContacts(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
   }
 
   return (
@@ -75,6 +53,16 @@ export default function CampaignScraper() {
         <div className="error-banner">
           <AlertCircle size={20} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {campaignCreated && (
+        <div className="success-banner" style={{ backgroundColor: '#10b981', color: 'white', padding: '16px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <CheckCircle size={24} />
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Campaign Created Successfully!</div>
+            <div>{campaignCreated.emailsQueued} emails have been generated and queued for sending. View progress in Email Tracking.</div>
+          </div>
         </div>
       )}
 
@@ -151,46 +139,25 @@ export default function CampaignScraper() {
           </button>
         </div>
 
-        {results.length > 0 && (
+        {campaignCreated && (
           <div className="results-section">
-            <h2>Scraped Contacts ({results.length})</h2>
-            <div className="results-table">
-              <div className="table-header">
-                <input
-                  type="checkbox"
-                  onChange={e => {
-                    if (e.target.checked) {
-                      setSelectedContacts(new Set(results.map(r => r.id)));
-                    } else {
-                      setSelectedContacts(new Set());
-                    }
-                  }}
-                  checked={selectedContacts.size === results.length && results.length > 0}
-                />
-                <div>Name</div>
-                <div>Email</div>
-                <div>Publication</div>
-                <div>Topic Match</div>
-                <div>Status</div>
-              </div>
-              {results.map(contact => (
-                <div key={contact.id} className="table-row">
-                  <input
-                    type="checkbox"
-                    checked={selectedContacts.has(contact.id)}
-                    onChange={() => toggleContactSelection(contact.id)}
-                  />
-                  <div>{contact.name}</div>
-                  <div>{contact.email}</div>
-                  <div>{contact.publication}</div>
-                  <div><span className="match-badge">{contact.topicMatch}%</span></div>
-                  <div><span className="status-badge">{contact.status}</span></div>
-                </div>
-              ))}
+            <h2>Next Steps</h2>
+            <p style={{ marginTop: '12px', color: '#666' }}>
+              Go to the <strong>Email Tracking</strong> tab in the sidebar to monitor your campaign progress.
+            </p>
+            <div style={{ marginTop: '20px' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setCampaignCreated(null);
+                  setCampaignName('');
+                  setTopic('');
+                  setGeography('');
+                }}
+              >
+                Create Another Campaign
+              </button>
             </div>
-            <button className="btn btn-primary">
-              Save {selectedContacts.size || results.length} Contacts
-            </button>
           </div>
         )}
       </div>

@@ -37,21 +37,47 @@ export default function SendCampaign() {
         throw new Error('Campaign not found');
       }
 
-      setProgress({ sent: 0, total: campaign.total_journalists || 0, remaining: campaign.total_journalists || 0 });
-
-      const response = await api.sendCampaign(selectedCampaign);
-
       setProgress({
-        sent: response.sent || 0,
-        total: campaign.total_journalists || 0,
-        remaining: (campaign.total_journalists || 0) - (response.sent || 0),
+        sent: campaign.sent_count || 0,
+        total: campaign.total_emails || 0,
+        remaining: (campaign.total_emails || 0) - (campaign.sent_count || 0)
       });
 
-      await loadCampaigns();
+      // The emails are already queued and sending automatically via rate limiter
+      // Poll for updates to show progress
+      const pollInterval = setInterval(async () => {
+        const response = await api.getCampaignDetails(selectedCampaign);
+        const updated = await supabase
+          .from('campaigns')
+          .select('*')
+          .eq('id', selectedCampaign)
+          .single();
+
+        if (updated.data) {
+          setProgress({
+            sent: updated.data.sent_count || 0,
+            total: updated.data.total_emails || 0,
+            remaining: (updated.data.total_emails || 0) - (updated.data.sent_count || 0),
+          });
+
+          // Stop polling when all emails are sent
+          if (updated.data.sent_count >= updated.data.total_emails) {
+            clearInterval(pollInterval);
+            setSending(false);
+            await loadCampaigns();
+          }
+        }
+      }, 3000); // Poll every 3 seconds
+
+      // Safety timeout after 10 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setSending(false);
+      }, 600000);
+
     } catch (error) {
-      console.error('Failed to send campaign:', error);
-      alert('Failed to send campaign');
-    } finally {
+      console.error('Failed to monitor campaign:', error);
+      alert('Failed to monitor campaign sending');
       setSending(false);
     }
   }

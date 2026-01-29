@@ -43,7 +43,9 @@ export async function upsertJournalist(journalistData) {
       country: journalistData.country || '',
       publication_name: journalistData.publication_name || '',
       topics: journalistData.topics || [],
-      recent_articles: journalistData.recent_articles || []
+      recent_articles: journalistData.recent_articles || [],
+      email_confidence: journalistData.email_confidence || 0,
+      email_source: journalistData.email_source || 'hunter'
     }, {
       onConflict: 'email'
     })
