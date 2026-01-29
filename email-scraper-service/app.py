@@ -1,12 +1,12 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from run_scraper import scrape_journalists_from_topic
 import os
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 HUNTER_API_KEY = os.getenv("HUNTER_API_KEY")
-import json
 
 app = FastAPI()
 
@@ -36,42 +36,31 @@ def find_email_with_hunter(first_name, last_name, domain):
         if data.get("data") and data["data"].get("email"):
             return (
                 data["data"]["email"],
-                data["data"].get("confidence", 0),
+                data["data"].get("score", 0),
                 "hunter"
             )
-
     except Exception as e:
         print("Hunter error:", e)
 
     return None, 0, "not_found"
 
-
 @app.get("/scrape")
 def scrape_journalists(topic: str = Query(...)):
+    journalists = scrape_journalists_from_topic(topic)
 
-    # TEMP: replace with RSS scraping later
-    first_name = "Jane"
-    last_name = "Doe"
-    publication = "Tech Weekly"
-    domain = "techweekly.com"
+    enriched = []
+    for j in journalists:
+        email, confidence, source = find_email_with_hunter(
+            j["first_name"],
+            j["last_name"],
+            j["domain"]
+        )
 
-    email, confidence, source = find_email_with_hunter(
-        first_name, last_name, domain
-    )
+        enriched.append({
+            **j,
+            "email": email or f"editor@{j['domain']}",
+            "email_confidence": confidence,
+            "email_source": source
+        })
 
-    journalist = {
-        "first_name": first_name,
-        "last_name": last_name,
-        "email": email or f"editor@{domain}",
-        "email_confidence": confidence,
-        "email_source": source,
-        "publication_name": publication,
-        "recent_articles": [
-            {
-                "title": f"{topic} trends in 2024",
-                "url": "https://example.com/article"
-            }
-        ]
-    }
-
-    return [journalist]
+    return enriched
