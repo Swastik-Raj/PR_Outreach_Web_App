@@ -19,6 +19,14 @@ export function getSupabaseClient() {
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          'x-my-custom-header': 'backend-service'
+        }
       }
     });
   }
