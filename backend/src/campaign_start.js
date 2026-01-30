@@ -1,5 +1,12 @@
-import { startCampaign } from "./controller.js"; // adjust the path
+import { startCampaign } from "./controller.js";
 import fs from "fs";
+import dotenv from "dotenv";
+import path from "path";
+
+// Load environment variables from parent directory
+dotenv.config({
+  path: path.resolve(process.cwd(), "..", ".env")
+});
 
 // Mock request and response objects
 const req = {
