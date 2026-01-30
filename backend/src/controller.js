@@ -24,12 +24,12 @@ export const generateEmail = async (req, res) => {
     };
 
     const prompt = `Generate a personalized email with the following context:
-Objective: ${context.objective}
-Tone: ${context.tone}
-Length: ${context.length}
-${context.referenceContent ? `Reference Content: ${context.referenceContent}` : ''}
-${context.companyInfo.company_name ? `Company: ${context.companyInfo.company_name}` : ''}
-${context.companyInfo.description ? `About: ${context.companyInfo.description}` : ''}
+    Objective: ${context.objective}
+    Tone: ${context.tone}
+    Length: ${context.length}
+    ${context.referenceContent ? `Reference Content: ${context.referenceContent}` : ''}
+    ${context.companyInfo.company_name ? `Company: ${context.companyInfo.company_name}` : ''}
+    ${context.companyInfo.description ? `About: ${context.companyInfo.description}` : ''}
 
 Generate a professional email with a subject line and body.`;
 
@@ -51,7 +51,7 @@ export const startCampaign = async (req, res) => {
 
   try {
     const scraperRes = await fetch(
-      `${process.env.SCRAPER_SERVICE_URL}/scrape?topic=${encodeURIComponent(topic)}`
+      `${SCRAPER_SERVICE_URL}/scrape?topic=${topic}`
     );
 
     if (!scraperRes.ok) {
@@ -90,6 +90,12 @@ export const startCampaign = async (req, res) => {
         email_source: emailData.source
     });
 
+    if (journalist.email_confidence < 70) {
+        console.log(
+            `Skipping ${journalist.email} due to low confidence`
+        );
+    continue;
+    }
     const article = journalist.recent_articles?.[0];
 
     // Generate AI email

@@ -1,10 +1,22 @@
 import feedparser
-from urllib.parse import quote
-import re
 from collections import defaultdict
+from publishers import PUBLISHERS
+from urllib.parse import urlparse
+
+
+def extract_author(entry, author_fields):
+    for field in author_fields:
+        value = entry.get(field)
+        if value:
+            return value.replace("By ", "").strip()
+    return ""
 
 def parse_name(full_name):
-    if not full_name or "Editorial" in full_name or "Team" in full_name:
+    if not full_name:
+        return "", ""
+
+    bad_terms = ["Editorial", "Staff", "Team", "Newsroom"]
+    if any(bad.lower() in full_name.lower() for bad in bad_terms):
         return "", ""
 
     parts = full_name.strip().split()
@@ -12,85 +24,40 @@ def parse_name(full_name):
         return parts[0], ""
     return parts[0], " ".join(parts[1:])
 
-def extract_topics(title, summary=""):
-    topic_keywords = [
-        "artificial intelligence", "ai", "machine learning", "ml",
-        "education", "edtech", "technology", "startup",
-        "data science", "analytics", "automation",
-        "chatgpt", "gpt", "llm", "generative ai",
-        "cloud computing"
-    ]
 
-    text = (title + " " + summary).lower()
-    return [kw.title() for kw in topic_keywords if kw in text]
-
-def get_publication_location(publication):
-    location_map = {
-        "TechCrunch": {"city": "San Francisco", "state": "CA", "country": "USA"},
-        "The Verge": {"city": "New York", "state": "NY", "country": "USA"},
-    }
-
-    return location_map.get(publication, {
-        "city": "New York",
-        "state": "NY",
-        "country": "USA"
-    })
-
-def extract_domain(publication):
-    safe = re.sub(r"[^a-zA-Z0-9]", "", publication).lower()
-    return f"{safe}.com"
-
-def scrape_journalists_from_topic(topic: str):
-    encoded_topic = quote(topic)
-    rss_url = f"https://news.google.com/rss/search?q={encoded_topic}"
-    feed = feedparser.parse(rss_url)
-
+def scrape_journalists_from_publishers(topic: str):
     journalists = defaultdict(lambda: {
         "first_name": "",
         "last_name": "",
         "publication_name": "",
         "domain": "",
-        "city": "",
-        "state": "",
-        "country": "",
         "topics": set(),
         "recent_articles": []
     })
 
-    for entry in feed.entries[:20]:
-        publication = entry.get("source", {}).get("title", "news")
-        author = entry.get("author")
+    for pub in PUBLISHERS:
+        feed = feedparser.parse(pub["rss"])
 
-        if not author or "Editorial" in author or "Team" in author:
-            continue
+        for entry in feed.entries[:20]:
+            author_raw = extract_author(entry, pub["author_fields"])
+            first_name, last_name = parse_name(author_raw)
 
-        first_name, last_name = parse_name(author)
-        domain = extract_domain(publication)
-        location = get_publication_location(publication)
+            if not first_name:
+                continue
 
-        article_title = entry.get("title", "")
-        article_summary = entry.get("summary", "")
-        topics = extract_topics(article_title, article_summary)
+            key = f"{first_name}-{last_name}-{pub['domain']}"
 
-        key = f"{first_name}-{last_name}-{publication}"
-        journalist = journalists[key]
+            journalist = journalists[key]
+            journalist["first_name"] = first_name
+            journalist["last_name"] = last_name
+            journalist["publication_name"] = pub["name"]
+            journalist["domain"] = pub["domain"]
 
-        journalist.update({
-            "first_name": first_name,
-            "last_name": last_name,
-            "publication_name": publication,
-            "domain": domain,
-            "city": location["city"],
-            "state": location["state"],
-            "country": location["country"],
-        })
-
-        journalist["topics"].update(topics)
-        journalist["recent_articles"].append({
-            "title": article_title,
-            "url": entry.get("link", ""),
-            "published": entry.get("published", "")
-        })
+            journalist["recent_articles"].append({
+                "title": entry.get("title", ""),
+                "url": entry.get("link", ""),
+                "published": entry.get("published", "")
+            })
 
     return [
         {

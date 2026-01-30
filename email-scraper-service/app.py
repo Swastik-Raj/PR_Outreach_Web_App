@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from run_scraper import scrape_journalists_from_topic
+from run_scraper import scrape_journalists_from_publishers
 import os
 import requests
 from dotenv import load_dotenv
@@ -46,19 +46,41 @@ def find_email_with_hunter(first_name, last_name, domain):
 
 @app.get("/scrape")
 def scrape_journalists(topic: str = Query(...)):
-    journalists = scrape_journalists_from_topic(topic)
+    journalists = scrape_journalists_from_publishers(topic)
 
     enriched = []
+    MIN_CONFIDENCE = 70
+
     for j in journalists:
+        # Skip Hunter if no real author name
+        if not j["first_name"] or not j["last_name"]:
+            enriched.append({
+                **j,
+                "email": f"editor@{j['domain']}",
+                "email_confidence": 0,
+                "email_source": "fallback"
+            })
+            continue
+
         email, confidence, source = find_email_with_hunter(
             j["first_name"],
             j["last_name"],
             j["domain"]
         )
 
+        # Reject low-confidence emails
+        if not email or confidence < MIN_CONFIDENCE:
+            enriched.append({
+                **j,
+                "email": f"editor@{j['domain']}",
+                "email_confidence": confidence,
+                "email_source": "low_confidence"
+            })
+            continue
+
         enriched.append({
             **j,
-            "email": email or f"editor@{j['domain']}",
+            "email": email,
             "email_confidence": confidence,
             "email_source": source
         })
