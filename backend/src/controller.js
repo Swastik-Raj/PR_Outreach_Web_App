@@ -50,8 +50,12 @@ export const startCampaign = async (req, res) => {
   const { company, topic, senderName = "PR Team", senderTitle = "Communications" } = req.body;
 
   try {
+    if (!process.env.SCRAPER_SERVICE_URL) {
+      throw new Error('SCRAPER_SERVICE_URL is not defined');
+    }
+
     const scraperRes = await fetch(
-      `${SCRAPER_SERVICE_URL}/scrape?topic=${topic}`
+      `${process.env.SCRAPER_SERVICE_URL}/scrape?topic=${encodeURIComponent(topic)}`
     );
 
     if (!scraperRes.ok) {
