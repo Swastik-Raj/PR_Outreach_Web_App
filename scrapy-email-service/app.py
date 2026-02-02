@@ -9,35 +9,35 @@ app = Flask(__name__)
 
 def run_spider(queue, domain, first_name, last_name):
     try:
+        import sys
+        from io import StringIO
         from scrapy.crawler import CrawlerRunner
-        from twisted.internet import reactor
         from scrapy import signals
+        from twisted.internet import reactor, defer
         from spiders.email_spider import EmailSpider
 
         results = []
-        spider_instance = None
-
-        def spider_opened(spider):
-            nonlocal spider_instance
-            spider_instance = spider
+        print(f"Starting spider for {domain}, {first_name} {last_name}", flush=True)
 
         def item_scraped(item, response, spider):
             results.append(dict(item))
+            print(f"Found email: {item.get('email')}", flush=True)
 
         settings = {
-            'CONCURRENT_REQUESTS': 2,
-            'DOWNLOAD_DELAY': 1,
-            'ROBOTSTXT_OBEY': True,
-            'USER_AGENT': 'Mozilla/5.0 (compatible; EmailFinderBot/1.0)',
-            'DEPTH_LIMIT': 3,
-            'CLOSESPIDER_PAGECOUNT': 20,
-            'LOG_LEVEL': 'WARNING',
+            'CONCURRENT_REQUESTS': 4,
+            'DOWNLOAD_DELAY': 0.5,
+            'ROBOTSTXT_OBEY': False,  # Disable for testing
+            'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'DEPTH_LIMIT': 2,
+            'CLOSESPIDER_PAGECOUNT': 10,
+            'DOWNLOAD_TIMEOUT': 10,
+            'LOG_LEVEL': 'ERROR',
+            'RETRY_ENABLED': False,
+            'REDIRECT_MAX_TIMES': 1,
         }
 
         runner = CrawlerRunner(settings)
-
         crawler = runner.create_crawler(EmailSpider)
-        crawler.signals.connect(spider_opened, signal=signals.spider_opened)
         crawler.signals.connect(item_scraped, signal=signals.item_scraped)
 
         d = runner.crawl(
@@ -48,11 +48,15 @@ def run_spider(queue, domain, first_name, last_name):
         )
 
         d.addBoth(lambda _: reactor.stop())
+
+        print("Starting reactor...", flush=True)
         reactor.run(installSignalHandlers=False)
+        print(f"Reactor stopped. Found {len(results)} results", flush=True)
 
         queue.put(results)
     except Exception as e:
-        queue.put({'error': str(e)})
+        import traceback
+        queue.put({'error': str(e), 'traceback': traceback.format_exc()})
 
 
 @app.route('/health', methods=['GET'])
@@ -80,9 +84,13 @@ def find_email():
 
     if process.is_alive():
         process.terminate()
+        process.join()
         return jsonify({'error': 'Scraping timeout'}), 504
 
-    results = queue.get() if not queue.empty() else []
+    try:
+        results = queue.get(timeout=1) if not queue.empty() else []
+    except:
+        results = []
 
     if isinstance(results, dict) and 'error' in results:
         return jsonify(results), 500
@@ -153,9 +161,13 @@ def find_and_verify():
 
     if process.is_alive():
         process.terminate()
+        process.join()
         return jsonify({'error': 'Scraping timeout'}), 504
 
-    results = queue.get() if not queue.empty() else []
+    try:
+        results = queue.get(timeout=1) if not queue.empty() else []
+    except:
+        results = []
 
     if isinstance(results, dict) and 'error' in results:
         return jsonify(results), 500
