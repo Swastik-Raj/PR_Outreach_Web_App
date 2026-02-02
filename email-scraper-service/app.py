@@ -6,15 +6,14 @@ import requests
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load .env from root directory
 root_env = Path(__file__).parent.parent / ".env"
 load_dotenv(root_env)
 
-HUNTER_API_KEY = os.getenv("HUNTER_API_KEY")
+SCRAPY_EMAIL_SERVICE_URL = os.getenv("SCRAPY_EMAIL_SERVICE_URL", "http://localhost:5002")
 print("=" * 50)
 print("Email Scraper Service Starting...")
 print(f"Environment file: {root_env}")
-print(f"HUNTER_API_KEY loaded: {'Yes' if HUNTER_API_KEY else 'No'}")
+print(f"Scrapy Email Service URL: {SCRAPY_EMAIL_SERVICE_URL}")
 print("=" * 50)
 
 app = FastAPI()
@@ -26,37 +25,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def find_email_with_hunter(first_name, last_name, domain):
-    if not HUNTER_API_KEY:
-        print(f" HUNTER_API_KEY missing for {first_name} {last_name}")
-        return None, 0, "missing_api_key"
+def find_email_with_scrapy(first_name, last_name, domain):
+    if not SCRAPY_EMAIL_SERVICE_URL:
+        print(f"⚠️ SCRAPY_EMAIL_SERVICE_URL missing for {first_name} {last_name}")
+        return None, 0, "missing_service_url"
 
-    url = "https://api.hunter.io/v2/email-finder"
-    params = {
-        "first_name": first_name,
-        "last_name": last_name,
-        "domain": domain,
-        "api_key": HUNTER_API_KEY
+    url = f"{SCRAPY_EMAIL_SERVICE_URL}/find-and-verify"
+    payload = {
+        "firstName": first_name,
+        "lastName": last_name,
+        "domain": domain
     }
 
     try:
-        print(f"Searching Hunter for: {first_name} {last_name} @ {domain}")
-        res = requests.get(url, params=params, timeout=10)
+        print(f"🔍 Searching with Scrapy for: {first_name} {last_name} @ {domain}")
+        res = requests.post(url, json=payload, timeout=90)
         data = res.json()
 
         if not res.ok:
-            print(f"Hunter API error: {data}")
+            print(f"❌ Scrapy service error: {data}")
             return None, 0, "api_error"
 
-        if data.get("data") and data["data"].get("email"):
-            email = data["data"]["email"]
-            score = data["data"].get("score", 0)
-            print(f"✓ Found: {email} (confidence: {score})")
-            return (email, score, "hunter")
+        if data.get("email"):
+            email = data["email"]
+            confidence = data.get("confidence", 0)
+            verified = data.get("verified", False)
+            print(f"✓ Found: {email} (confidence: {confidence}%, verified: {verified})")
+            return (email, confidence, "scrapy+verification")
         else:
-            print(f" No email found (API response: {data.get('errors', 'no data')})")
+            print(f"⚠️ No email found: {data.get('message', 'no data')}")
+    except requests.exceptions.Timeout:
+        print(f"⏱️ Scrapy service timeout for {first_name} {last_name}")
+        return None, 0, "timeout"
     except Exception as e:
-        print(f"Hunter error for {first_name} {last_name}: {e}")
+        print(f"❌ Scrapy error for {first_name} {last_name}: {e}")
 
     return None, 0, "not_found"
 
@@ -85,7 +87,7 @@ def scrape_journalists(topic: str = Query(...)):
             stats["fallback"] += 1
             continue
 
-        email, confidence, source = find_email_with_hunter(
+        email, confidence, source = find_email_with_scrapy(
             j["first_name"],
             j["last_name"],
             j["domain"]

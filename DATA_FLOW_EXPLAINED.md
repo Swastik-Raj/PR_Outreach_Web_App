@@ -5,7 +5,7 @@
 ```
 1. Scraper Service (Python)
    ↓
-2. Email Enrichment (Hunter API)
+2. Email Enrichment (Scrapy Email Service)
    ↓
 3. Backend Controller
    ↓
@@ -44,21 +44,27 @@
 
 ---
 
-## 2️⃣ EMAIL ENRICHMENT (Hunter API)
+## 2️⃣ EMAIL ENRICHMENT (Scrapy Email Service)
 
-**File:** `/backend/src/enrichment/hunter.service.js`
+**Files:**
+- `/email-scraper-service/app.py` (calls Scrapy service)
+- `/scrapy-email-service/app.py` (email finding + verification)
 
 ### What it does:
 - Takes `firstName`, `lastName`, `domain` from scraper
-- Queries Hunter.io API to find verified email
-- Returns email with confidence score
+- Uses Scrapy to crawl the domain and find matching emails
+- Validates emails using DNS MX records and SMTP verification
+- Returns email with confidence score and verification status
 
 ### Data returned:
 ```javascript
 {
   email: "cade.metz@nytimes.com",
-  confidence: 99,  // 0-100 score
-  source: "hunter"
+  confidence: 95,  // 0-100 score (combined scraping + verification)
+  source: "scrapy+verification",
+  verified: true,  // SMTP verification result
+  dns_valid: true,
+  smtp_valid: true
 }
 ```
 
@@ -72,25 +78,21 @@
 
 ```javascript
 for (const j of journalists) {
-    // Step 1: Get email from Hunter
-    const emailData = await findJournalistEmail({
-        firstName: j.first_name,
-        lastName: j.last_name,
-        domain: j.domain  // ✅ FIXED: was j.publication_domain
-    });
+    // Step 1: Email enrichment already happened in Python scraper service
+    // The scraper service calls the Scrapy email service for each journalist
 
     // Step 2: Skip if no verified email (confidence < 70%)
-    if (!emailData?.email || emailData.confidence < 70) {
+    if (!j.email || j.email_confidence < 70) {
         console.log(`Skipping ${j.first_name} ${j.last_name} — no verified email`);
         continue;
     }
 
     // Step 3: Save to Supabase
     const journalist = await upsertJournalist({
-        ...j,                              // All scraper data
-        email: emailData.email,            // Verified email
-        email_confidence: emailData.confidence,
-        email_source: emailData.source
+        ...j,                              // All scraper data including email
+        email: j.email,                    // Email from Scrapy service
+        email_confidence: j.email_confidence,
+        email_source: j.email_source       // "scrapy+verification"
     });
 
     // Step 4: Create email record
