@@ -11,11 +11,17 @@ def run_spider(queue, domain, first_name, last_name):
     try:
         from scrapy.crawler import CrawlerRunner
         from twisted.internet import reactor
+        from scrapy import signals
         from spiders.email_spider import EmailSpider
 
         results = []
+        spider_instance = None
 
-        def collect_item(item, response, spider):
+        def spider_opened(spider):
+            nonlocal spider_instance
+            spider_instance = spider
+
+        def item_scraped(item, response, spider):
             results.append(dict(item))
 
         settings = {
@@ -30,15 +36,16 @@ def run_spider(queue, domain, first_name, last_name):
 
         runner = CrawlerRunner(settings)
 
+        crawler = runner.create_crawler(EmailSpider)
+        crawler.signals.connect(spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(item_scraped, signal=signals.item_scraped)
+
         d = runner.crawl(
-            EmailSpider,
+            crawler,
             domain=domain,
             first_name=first_name,
             last_name=last_name
         )
-
-        for result in EmailSpider.found_emails:
-            results.append(result)
 
         d.addBoth(lambda _: reactor.stop())
         reactor.run(installSignalHandlers=False)
