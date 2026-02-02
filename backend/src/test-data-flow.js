@@ -52,10 +52,10 @@ async function testDataFlow() {
   console.log("\n4. Saving to Supabase...");
   try {
     const journalist = await upsertJournalist(combinedData);
-    console.log("✅ Successfully saved journalist:");
+    console.log("Successfully saved journalist:");
     console.log(JSON.stringify(journalist, null, 2));
   } catch (error) {
-    console.error("❌ Error saving journalist:", error.message);
+    console.error("Error saving journalist:", error.message);
   }
 }
 

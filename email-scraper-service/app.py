@@ -28,7 +28,7 @@ app.add_middleware(
 
 def find_email_with_hunter(first_name, last_name, domain):
     if not HUNTER_API_KEY:
-        print(f"⚠️  HUNTER_API_KEY missing for {first_name} {last_name}")
+        print(f" HUNTER_API_KEY missing for {first_name} {last_name}")
         return None, 0, "missing_api_key"
 
     url = "https://api.hunter.io/v2/email-finder"
@@ -114,7 +114,7 @@ def scrape_journalists(topic: str = Query(...)):
         stats["verified"] += 1
 
     print(f"\n{'='*60}")
-    print(f"📊 Enrichment Summary:")
+    print(f" Enrichment Summary:")
     print(f" Verified emails (>={MIN_CONFIDENCE}% confidence): {stats['verified']}")
     print(f" Low confidence emails: {stats['low_confidence']}")
     print(f" No email found: {stats['not_found']}")

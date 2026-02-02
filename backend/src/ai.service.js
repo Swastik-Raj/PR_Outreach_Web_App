@@ -1,3 +1,9 @@
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 export async function generatePersonalizedEmail({
   journalistName,
   publication,
@@ -7,13 +13,10 @@ export async function generatePersonalizedEmail({
   senderName,
   senderTitle
 }) {
-  // Confirm the API key is loaded
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("ERROR: GOOGLE_API_KEY not set in environment!");
-    return fallbackEmail(journalistName, publication, articleTitle, topic, company);
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("ERROR: OPENAI_API_KEY not set in environment!");
+    return fallbackEmail( journalistName, publication, articleTitle, topic, company, senderName, senderTitle);
   }
-
-  console.log("Gemini key loaded:", !!process.env.GOOGLE_API_KEY);
 
   const prompt = `
 You are a PR outreach assistant.
@@ -37,51 +40,48 @@ Guidelines:
 - Be concise (max 120 words)
 - No emojis, no buzzwords
 - End with a soft call-to-action
-
-Email:
 `;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GOOGLE_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-  contents: [
-    {
-      parts: [
-           { text: prompt }
-        ]
-      }
-      ]
-    })
-      }
-    );
+    const response = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: "You write concise, professional PR emails." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.6
+    });
 
-    if (!response.ok) {
-      const raw = await response.text();
-      console.error("Gemini API error:", response.status, raw);
-      return fallbackEmail(journalistName, publication, articleTitle, topic, company);
-    }
-
-    const data = await response.json();
-
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = response.choices?.[0]?.message?.content;
 
     if (!text) {
-      console.warn("Gemini returned empty response", data);
-      return fallbackEmail(journalistName, publication, articleTitle, topic, company);
+      console.warn("OpenAI returned empty response", response);
+      return fallbackEmail(
+        journalistName,
+        publication,
+        articleTitle,
+        topic,
+        company,
+        senderName,
+        senderTitle
+      );
     }
 
     return text.trim();
 
   } catch (err) {
     console.error("AI email generation failed:", err);
-    return fallbackEmail(journalistName, publication, articleTitle, topic, company);
-  } // <-- closes catch
-
-} // <-- closes generatePersonalizedEmail
+    return fallbackEmail(
+      journalistName,
+      publication,
+      articleTitle,
+      topic,
+      company,
+      senderName,
+      senderTitle
+    );
+  }
+}
 
 /**
  * Fallback email template if AI fails

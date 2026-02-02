@@ -85,7 +85,7 @@ export const startCampaign = async (req, res) => {
     // Skip email generation if no verified email
     if (!journalist.email || journalist.email_confidence < 70) {
         console.log(
-        `⚠️  Saved ${j.first_name} ${j.last_name} but skipping email (confidence: ${journalist.email_confidence}%)`
+        ` Saved ${j.first_name} ${j.last_name} but skipping email (confidence: ${journalist.email_confidence}%)`
         );
         continue;
     }
