@@ -77,12 +77,15 @@ def find_email():
 
     domain = domain.replace('https://', '').replace('http://', '').split('/')[0]
 
+    print(f"[find-email] Searching for: {first_name} {last_name} @ {domain}", flush=True)
+
     queue = Queue()
     process = Process(target=run_spider, args=(queue, domain, first_name, last_name))
     process.start()
-    process.join(timeout=60)
+    process.join(timeout=120)  # Increased timeout
 
     if process.is_alive():
+        print(f"[find-email] TIMEOUT after 120s for {domain}", flush=True)
         process.terminate()
         process.join()
         return jsonify({'error': 'Scraping timeout'}), 504
@@ -157,7 +160,7 @@ def find_and_verify():
     queue = Queue()
     process = Process(target=run_spider, args=(queue, domain, first_name, last_name))
     process.start()
-    process.join(timeout=60)
+    process.join(timeout=120)  # Increased timeout
 
     if process.is_alive():
         process.terminate()
