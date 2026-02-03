@@ -31,7 +31,6 @@ export default function EmailLists() {
         return {
           id: campaign.id,
           name: `${campaign.company} - ${campaign.topic}`,
-          source: 'Scraped',
           status: campaign.status || 'draft',
           count: count || 0,
           unsubscribed: campaign.unsubscribed_count || 0,
@@ -148,7 +147,6 @@ export default function EmailLists() {
       <div className="lists-table">
         <div className="table-header">
           <div>List Name</div>
-          <div>Source</div>
           <div>Contacts</div>
           <div>Unsubscribed</div>
           <div>Blocked</div>
@@ -168,7 +166,6 @@ export default function EmailLists() {
           filteredLists.map(list => (
             <div key={list.id} className="table-row">
               <div><strong>{list.name}</strong></div>
-              <div>{list.source}</div>
               <div>{list.count}</div>
               <div className="unsubscribed">{list.unsubscribed}</div>
               <div className="blocked">{list.blocked}</div>
