@@ -8,7 +8,9 @@ from email_verifier import EmailVerifier
 app = Flask(__name__)
 
 def run_spider(queue, domain, first_name, last_name):
+    print(f"[run_spider] PROCESS STARTED - PID={os.getpid()}", flush=True)
     try:
+        print(f"[run_spider] Importing dependencies...", flush=True)
         import sys
         from io import StringIO
         from scrapy.crawler import CrawlerRunner
@@ -16,12 +18,20 @@ def run_spider(queue, domain, first_name, last_name):
         from twisted.internet import reactor, defer
         from spiders.email_spider import EmailSpider
 
+        print(f"[run_spider] Dependencies imported successfully", flush=True)
+
         results = []
-        print(f"Starting spider for {domain}, {first_name} {last_name}", flush=True)
+        print(f"[run_spider] Starting spider for {domain}, {first_name} {last_name}", flush=True)
 
         def item_scraped(item, response, spider):
             results.append(dict(item))
-            print(f"Found email: {item.get('email')}", flush=True)
+            print(f"[run_spider] Found email: {item.get('email')}", flush=True)
+
+        def spider_opened(spider):
+            print(f"[run_spider] Spider opened and starting to crawl", flush=True)
+
+        def spider_closed(spider, reason):
+            print(f"[run_spider] Spider closed: {reason}, found {len(results)} emails", flush=True)
 
         settings = {
             'CONCURRENT_REQUESTS': 4,
@@ -30,15 +40,18 @@ def run_spider(queue, domain, first_name, last_name):
             'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'DEPTH_LIMIT': 2,
             'CLOSESPIDER_PAGECOUNT': 10,
-            'DOWNLOAD_TIMEOUT': 10,
-            'LOG_LEVEL': 'ERROR',
+            'DOWNLOAD_TIMEOUT': 15,
+            'LOG_LEVEL': 'INFO',  # Changed from ERROR to see what's happening
             'RETRY_ENABLED': False,
             'REDIRECT_MAX_TIMES': 1,
+            'CLOSESPIDER_TIMEOUT': 30,  # Force spider to close after 30 seconds
         }
 
         runner = CrawlerRunner(settings)
         crawler = runner.create_crawler(EmailSpider)
         crawler.signals.connect(item_scraped, signal=signals.item_scraped)
+        crawler.signals.connect(spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(spider_closed, signal=signals.spider_closed)
 
         d = runner.crawl(
             crawler,
@@ -49,14 +62,28 @@ def run_spider(queue, domain, first_name, last_name):
 
         d.addBoth(lambda _: reactor.stop())
 
-        print("Starting reactor...", flush=True)
-        reactor.run(installSignalHandlers=False)
-        print(f"Reactor stopped. Found {len(results)} results", flush=True)
+        # Force stop reactor after 60 seconds as a safety measure
+        def force_stop():
+            print(f"[run_spider] Force stopping reactor after 60s timeout", flush=True)
+            if reactor.running:
+                reactor.stop()
 
+        reactor.callLater(60, force_stop)
+
+        print("[run_spider] Starting reactor...", flush=True)
+        reactor.run(installSignalHandlers=False)
+        print(f"[run_spider] Reactor stopped. Found {len(results)} results", flush=True)
+
+        print(f"[run_spider] Putting {len(results)} results in queue", flush=True)
         queue.put(results)
+        print(f"[run_spider] Results successfully queued", flush=True)
     except Exception as e:
         import traceback
-        queue.put({'error': str(e), 'traceback': traceback.format_exc()})
+        error_msg = f"[run_spider] EXCEPTION: {str(e)}"
+        tb = traceback.format_exc()
+        print(error_msg, flush=True)
+        print(tb, flush=True)
+        queue.put({'error': str(e), 'traceback': tb})
 
 
 @app.route('/health', methods=['GET'])
@@ -91,8 +118,14 @@ def find_email():
         return jsonify({'error': 'Scraping timeout'}), 504
 
     try:
-        results = queue.get(timeout=1) if not queue.empty() else []
-    except:
+        if not queue.empty():
+            results = queue.get(timeout=5)
+            print(f"[endpoint] Got results from queue: {len(results) if isinstance(results, list) else 'error'}", flush=True)
+        else:
+            print(f"[endpoint] Queue is empty", flush=True)
+            results = []
+    except Exception as e:
+        print(f"[endpoint] Error getting queue results: {e}", flush=True)
         results = []
 
     if isinstance(results, dict) and 'error' in results:
@@ -168,8 +201,14 @@ def find_and_verify():
         return jsonify({'error': 'Scraping timeout'}), 504
 
     try:
-        results = queue.get(timeout=1) if not queue.empty() else []
-    except:
+        if not queue.empty():
+            results = queue.get(timeout=5)
+            print(f"[endpoint] Got results from queue: {len(results) if isinstance(results, list) else 'error'}", flush=True)
+        else:
+            print(f"[endpoint] Queue is empty", flush=True)
+            results = []
+    except Exception as e:
+        print(f"[endpoint] Error getting queue results: {e}", flush=True)
         results = []
 
     if isinstance(results, dict) and 'error' in results:
