@@ -25,6 +25,10 @@ class EmailSpider(scrapy.Spider):
 
         self.email_patterns = self._generate_email_patterns()
 
+        print(f'[EmailSpider] Initialized for {first_name} {last_name} @ {domain}', flush=True)
+        print(f'[EmailSpider] Start URLs: {self.start_urls}', flush=True)
+        print(f'[EmailSpider] Looking for patterns: {self.email_patterns[:3]}...', flush=True)
+
     def _generate_email_patterns(self):
         if not self.first_name or not self.last_name:
             return []
@@ -47,12 +51,15 @@ class EmailSpider(scrapy.Spider):
         return patterns
 
     def parse(self, response):
+        self.logger.info(f'[spider] Parsing URL: {response.url}')
+
         email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 
         text_content = response.xpath('//body//text()').getall()
         page_text = ' '.join(text_content)
 
         emails = re.findall(email_regex, page_text)
+        self.logger.info(f'[spider] Found {len(emails)} potential emails on {response.url}')
 
         for email in emails:
             email = email.lower()
@@ -60,6 +67,7 @@ class EmailSpider(scrapy.Spider):
                 self.found_emails.append(email)
 
                 score = self._calculate_match_score(email)
+                self.logger.info(f'[spider] Yielding email: {email} (score: {score})')
                 yield {
                     'email': email,
                     'source_url': response.url,
@@ -67,9 +75,33 @@ class EmailSpider(scrapy.Spider):
                     'match_type': self._get_match_type(email)
                 }
 
+        # Follow links with keywords or author pages
+        keywords = ['about', 'team', 'contact', 'staff', 'author', 'people', 'writers', 'contributors', 'editorial']
+
+        # Also look for the person's name in URLs
+        name_patterns = []
+        if self.first_name and self.last_name:
+            name_patterns = [
+                self.first_name,
+                self.last_name,
+                f'{self.first_name}-{self.last_name}',
+                f'{self.first_name}.{self.last_name}',
+                f'{self.first_name}_{self.last_name}'
+            ]
+
+        links_followed = 0
         for href in response.css('a::attr(href)').getall():
-            if any(keyword in href.lower() for keyword in ['about', 'team', 'contact', 'staff', 'author', 'people']):
+            href_lower = href.lower()
+
+            # Check keywords or name patterns
+            should_follow = any(keyword in href_lower for keyword in keywords)
+            should_follow = should_follow or any(pattern in href_lower for pattern in name_patterns)
+
+            if should_follow:
+                links_followed += 1
                 yield response.follow(href, self.parse)
+
+        self.logger.info(f'[spider] Following {links_followed} links from {response.url}')
 
     def _calculate_match_score(self, email):
         if not self.first_name or not self.last_name:
