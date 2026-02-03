@@ -76,7 +76,7 @@
 
 .table-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr 1.2fr 1.2fr;
   gap: 1rem;
   padding: 1rem;
   background: #f8fafc;
@@ -86,11 +86,12 @@
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .table-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr 1.2fr 1.2fr;
   gap: 1rem;
   padding: 1rem;
   border-bottom: 1px solid #e2e8f0;
