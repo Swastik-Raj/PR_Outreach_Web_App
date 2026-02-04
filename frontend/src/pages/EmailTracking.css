@@ -112,6 +112,35 @@
   letter-spacing: 0.5px;
 }
 
+.table-row {
+  display: grid;
+  grid-template-columns: 1.5fr 2fr 1.5fr 1fr 1.5fr;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  align-items: center;
+  transition: background 0.3s ease;
+}
+
+.table-row:hover {
+  background: #f8fafc;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #dbeafe;
+  color: #1e40af;
+  display: inline-block;
+}
+
 .empty-state {
   padding: 3rem;
   text-align: center;
@@ -123,7 +152,15 @@
     grid-template-columns: 1fr;
   }
 
-  .table-header {
-    grid-template-columns: 1fr;
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .table-header > div:nth-child(4),
+  .table-header > div:nth-child(5),
+  .table-row > div:nth-child(4),
+  .table-row > div:nth-child(5) {
+    display: none;
   }
 }
