@@ -2,12 +2,8 @@ import { getSupabaseClient } from "./supabase.js";
 import { Resend } from "resend";
 
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
-const DEV_MODE = process.env.DEV_MODE === "true";
-const DEV_TEST_EMAIL = process.env.DEV_TEST_EMAIL;
 
-const resend = EMAIL_ENABLED
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendEmailWithTracking(to, subject, html, emailId) {
   const supabase = getSupabaseClient();
@@ -27,7 +23,7 @@ export async function sendEmailWithTracking(to, subject, html, emailId) {
 
   // DEV MODE - Store the complete email with tracking for testing
   if (!EMAIL_ENABLED) {
-    console.log("[DEV MODE] Email sending disabled - storing in database for review");
+    console.log("[DEV MODE] Email sending disabled - storing in database and sending to test email");
     console.log({ to, subject, emailId });
 
     // Save the complete HTML (with tracking pixel and unsubscribe link) to database
@@ -43,43 +39,35 @@ export async function sendEmailWithTracking(to, subject, html, emailId) {
 
     console.log(`✓ Email stored in database with tracking. View in Supabase: emails table, id=${emailId}`);
 
-    return { success: true, devMode: true, emailId };
-  }
-
-  // DEV MODE WITH EMAIL SENDING - Send to test email instead of real recipient
-  if (DEV_MODE && DEV_TEST_EMAIL) {
-    console.log(`[DEV MODE] Redirecting email from ${to} to ${DEV_TEST_EMAIL}`);
+    // ALSO send to personal test email to check delivery and functionality
+    const TEST_EMAIL = "your-email@example.com"; // Replace with your personal email
 
     const devNotice = `
     <div style="background:#fff3cd;border:1px solid #ffc107;padding:15px;margin-bottom:20px;border-radius:4px;">
       <strong>🧪 DEV MODE TEST EMAIL</strong><br/>
       <strong>Original Recipient:</strong> ${to}<br/>
       <strong>Original Subject:</strong> ${subject}<br/>
-      <strong>Email ID:</strong> ${emailId}
+      <strong>Email ID:</strong> ${emailId}<br/>
+      <strong>Note:</strong> Tracking and unsubscribe links are fully functional for testing.
     </div>
     `;
 
     const devTrackedHtml = devNotice + trackedHtml;
     const devSubject = `[DEV TEST] ${subject}`;
 
-    const response = await resend.emails.send({
-      from: process.env.FROM_EMAIL,
-      to: DEV_TEST_EMAIL,
-      subject: devSubject,
-      html: devTrackedHtml
-    });
+    try {
+      const response = await resend.emails.send({
+        from: process.env.FROM_EMAIL,
+        to: TEST_EMAIL,
+        subject: devSubject,
+        html: devTrackedHtml
+      });
+      console.log(`✓ Dev test email sent to ${TEST_EMAIL} (Resend ID: ${response.id})`);
+    } catch (error) {
+      console.error(`✗ Failed to send dev test email:`, error.message);
+    }
 
-    await supabase
-      .from("emails")
-      .update({
-        resend_email_id: response.id,
-        status: "sent",
-        sent_at: new Date().toISOString()
-      })
-      .eq("id", emailId);
-
-    console.log(`✓ Dev test email sent to ${DEV_TEST_EMAIL} (original: ${to})`);
-    return { success: true, devMode: true, emailId, testEmail: DEV_TEST_EMAIL };
+    return { success: true, devMode: true, emailId };
   }
 
   // REAL SEND
