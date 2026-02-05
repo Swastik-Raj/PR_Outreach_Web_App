@@ -90,7 +90,7 @@ export default function CampaignScraper() {
               onChange={e => setCampaignType(e.target.value)}
               disabled={scraping}
             >
-              <option>PR Outreach</option>
+              <option>Email Outreach</option>
               <option>Newsletter</option>
               <option>Client Update</option>
             </select>
