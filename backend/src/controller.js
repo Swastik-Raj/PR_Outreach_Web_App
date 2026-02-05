@@ -167,6 +167,11 @@ export const sendCampaignEmails = async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
+    // Prevent starting an already running campaign
+    if (campaign.status === 'running') {
+      return res.status(400).json({ error: 'Campaign is already running' });
+    }
+
     // Get all queued emails for this campaign
     const { data: emails, error: emailsError } = await supabase
       .from('emails')
