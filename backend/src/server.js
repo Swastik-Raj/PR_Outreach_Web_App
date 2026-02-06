@@ -31,6 +31,7 @@ console.log("- SUPABASE_URL:", !!process.env.SUPABASE_URL);
 console.log("- SUPABASE_SERVICE_ROLE_KEY:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 console.log("- RESEND_API_KEY:", !!process.env.RESEND_API_KEY);
 console.log("- HUNTER_API_KEY:", !!process.env.HUNTER_API_KEY);
+console.log("- FROM_EMAIL:", process.env.FROM_EMAIL);
 console.log("- SCRAPER_SERVICE_URL:", !!process.env.SCRAPER_SERVICE_URL, process.env.SCRAPER_SERVICE_URL);
 console.log(
   "- EMAIL_ENABLED (raw):",
