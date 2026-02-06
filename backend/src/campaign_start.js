@@ -1,14 +1,11 @@
 import { startCampaign } from "./controller.js";
-import fs from "fs";
 import dotenv from "dotenv";
 import path from "path";
 
-// Load environment variables from parent directory
 dotenv.config({
   path: path.resolve(process.cwd(), "..", ".env")
 });
 
-// Mock request and response objects
 const req = {
   body: {
     company: "Dumroo.ai",
@@ -16,19 +13,27 @@ const req = {
   }
 };
 
-const scraperRes = await fetch(
-  `${process.env.SCRAPER_SERVICE_URL}/scrape?topic=${encodeURIComponent(topic)}`
-);
+const res = {
+  status: (code) => ({
+    json: (data) => {
+      console.log(`Response [${code}]:`, JSON.stringify(data, null, 2));
+      return res;
+    }
+  }),
+  json: (data) => {
+    console.log('Response [200]:', JSON.stringify(data, null, 2));
+    return res;
+  }
+};
 
-if (!scraperRes.ok) {
-  throw new Error("Failed to fetch journalists from scraper service");
-}
+console.log('Starting campaign with:', req.body);
 
-if (journalist.unsubscribed) {
-  console.log(`Skipping unsubscribed journalist: ${journalist.email}`);
-  continue;
-}
-const scrapedJournalists = await scraperRes.json();
-
-// Call the function
-startCampaign(req, res);
+startCampaign(req, res)
+  .then(() => {
+    console.log('Campaign started successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('Campaign failed:', error);
+    process.exit(1);
+  });
