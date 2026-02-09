@@ -164,10 +164,10 @@ export async function handleResendWebhook(req, res) {
   const supabase = getSupabaseClient();
 
   try {
-    // Find the email → journalist
+    // Find the email → journalist and campaign
     const { data: email, error } = await supabase
       .from("emails")
-      .select("journalist_id")
+      .select("journalist_id, campaign_id")
       .eq("id", emailId)
       .single();
 
@@ -184,8 +184,16 @@ export async function handleResendWebhook(req, res) {
       })
       .eq("id", email.journalist_id);
 
+    // Increment campaign unsubscribe counter
+    if (email.campaign_id) {
+      await supabase.rpc('increment_campaign_counter', {
+        campaign_id: email.campaign_id,
+        field_name: 'unsubscribed_count'
+      });
+    }
+
     res.send(`
-      <h2>You’re unsubscribed</h2>
+      <h2>You're unsubscribed</h2>
       <p>You will no longer receive emails from us.</p>
     `);
 
