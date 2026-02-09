@@ -22,32 +22,37 @@ export async function generatePersonalizedEmail({
 }) {
   if (!process.env.OPENAI_API_KEY) {
     console.error("ERROR: OPENAI_API_KEY not set in environment!");
-    return fallbackEmail( journalistName, publication, articleTitle, topic, company, senderName, senderTitle);
+    const fallback = fallbackEmail( journalistName, publication, articleTitle, topic, company, senderName, senderTitle);
+    return fallback.html;
   }
 
-  const prompt = `
-You are a PR outreach assistant.
+  const prompt = `Write a professional PR outreach email with the following EXACT structure:
 
-Write a short, friendly, personalized outreach email.
+PARAGRAPH 1:
+Hi ${journalistName}, I recently read your article "${articleTitle}" in ${publication} [add one sentence about why it resonated].
 
-Context:
-- Journalist: ${journalistName}
-- Publication: ${publication}
-- Article they wrote: "${articleTitle}"
-- Company pitching the story: ${company}
-- Campaign topic: ${topic}
-- Sender name: ${senderName}
-- Sender role: ${senderTitle}
+[BLANK LINE]
 
-Guidelines:
-- Sign the email using the sender name and role
-- Do NOT use placeholders like [Your Name]
-- Mention the article naturally
-- Explain why the topic fits their beat
-- Be concise (max 120 words)
-- No emojis, no buzzwords
-- End with a soft call-to-action
-`;
+PARAGRAPH 2:
+[One or two sentences connecting their article to ${topic} and explaining why this would interest their audience.]
+
+[BLANK LINE]
+
+PARAGRAPH 3:
+[Soft call-to-action asking if they'd like to learn more.]
+
+[BLANK LINE]
+
+Best regards,
+${senderName}
+${senderTitle}
+${company}
+
+IMPORTANT FORMATTING RULES:
+- You MUST include blank lines between each paragraph
+- Keep it under 100 words (excluding signature)
+- No buzzwords or emojis
+- Be warm but professional`;
 
   try {
     const response = await getClient().chat.completions.create({
@@ -63,7 +68,7 @@ Guidelines:
 
     if (!text) {
       console.warn("OpenAI returned empty response", response);
-      return fallbackEmail(
+      const fallback = fallbackEmail(
         journalistName,
         publication,
         articleTitle,
@@ -72,13 +77,15 @@ Guidelines:
         senderName,
         senderTitle
       );
+      return fallback.html;
     }
 
-    return convertPlainTextToHtml(text.trim());
+    const { html } = convertPlainTextToHtml(text.trim());
+    return html;
 
   } catch (err) {
     console.error("AI email generation failed:", err);
-    return fallbackEmail(
+    const fallback = fallbackEmail(
       journalistName,
       publication,
       articleTitle,
@@ -87,26 +94,63 @@ Guidelines:
       senderName,
       senderTitle
     );
+    return fallback.html;
   }
 }
 
 /**
  * Convert plain text email to HTML format
+ * Returns both HTML and plain text versions
  */
 function convertPlainTextToHtml(text) {
-  const paragraphs = text.split('\n\n').filter(p => p.trim());
+  let processedText = text.trim();
+
+  const signaturePatterns = /^(Best regards,|Sincerely,|Thanks,|Regards,)/im;
+  const signatureMatch = processedText.match(signaturePatterns);
+
+  if (signatureMatch) {
+    const signatureIndex = processedText.indexOf(signatureMatch[0]);
+    const body = processedText.substring(0, signatureIndex).trim();
+    const signature = processedText.substring(signatureIndex).trim();
+
+    const bodyParagraphs = body.split(/\n\s*\n/).filter(p => p.trim());
+    const signatureLines = signature.split('\n').map(line => line.trim()).filter(line => line);
+
+    const bodyHtml = bodyParagraphs.map(paragraph => {
+      const lines = paragraph.split('\n').map(line => line.trim()).filter(line => line);
+      const content = lines.join('<br/>');
+      return `<p style="margin: 0 0 16px 0; line-height: 1.6;">${content}</p>`;
+    }).join('');
+
+    const signatureHtml = `<p style="margin: 20px 0 0 0; line-height: 1.6;">${signatureLines.join('<br/>')}</p>`;
+
+    const html = `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; color: #333; max-width: 600px;">
+  ${bodyHtml}${signatureHtml}
+</div>
+    `.trim();
+
+    return { html, text: processedText };
+  }
+
+  const paragraphs = processedText.split(/\n\s*\n/).filter(p => p.trim());
 
   const htmlParagraphs = paragraphs.map(paragraph => {
-    const lines = paragraph.split('\n').filter(line => line.trim());
-    const content = lines.join('<br>');
+    const lines = paragraph.split('\n').map(line => line.trim()).filter(line => line);
+    const content = lines.join('<br/>');
     return `<p style="margin: 0 0 16px 0; line-height: 1.6;">${content}</p>`;
   });
 
-  return `
+  const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; color: #333; max-width: 600px;">
   ${htmlParagraphs.join('')}
 </div>
   `.trim();
+
+  return {
+    html,
+    text: processedText
+  };
 }
 
 /**
