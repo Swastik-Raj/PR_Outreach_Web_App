@@ -79,7 +79,7 @@ export async function createCampaign(company, topic) {
     .insert({
       company,
       topic,
-      status: 'running'
+      status: 'draft'
     })
     .select()
     .single();
