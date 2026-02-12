@@ -12,11 +12,37 @@ import { rateLimiter } from "./rateLimiter.service.js";
 import { sendEmailWithTracking } from "./resend.service.js";
 
 export const generateEmail = async (req, res) => {
-  const { referenceContent, objective, tone, length, companyInfo } = req.body;
+  const { referenceContent, objective, tone, length, companyInfo, journalistId } = req.body;
 
   try {
+    const supabase = getSupabaseClient();
+    let journalistInfo = {};
+    let articleReference = '';
+
+    // If journalist is selected, fetch their information
+    if (journalistId) {
+      const { data: journalist, error } = await supabase
+        .from('journalists')
+        .select('*')
+        .eq('id', journalistId)
+        .maybeSingle();
+
+      if (journalist && !error) {
+        journalistInfo = {
+          name: `${journalist.first_name} ${journalist.last_name}`.trim(),
+          publication: journalist.publication_name,
+        };
+
+        // If no reference content provided, use journalist's recent article
+        if (!referenceContent && journalist.recent_articles && journalist.recent_articles.length > 0) {
+          const article = journalist.recent_articles[0];
+          articleReference = `Recent article by ${journalistInfo.name}: "${article.title}"${article.url ? ` (${article.url})` : ''}`;
+        }
+      }
+    }
+
     const context = {
-      referenceContent: referenceContent || '',
+      referenceContent: referenceContent || articleReference,
       objective: objective || 'Pitch article',
       tone: tone || 'Professional',
       length: length || 'Medium',
@@ -24,6 +50,8 @@ export const generateEmail = async (req, res) => {
     };
 
     const prompt = `Generate a personalized email with the following context:
+    ${journalistInfo.name ? `Recipient: ${journalistInfo.name}` : ''}
+    ${journalistInfo.publication ? `Publication: ${journalistInfo.publication}` : ''}
     Objective: ${context.objective}
     Tone: ${context.tone}
     Length: ${context.length}
@@ -33,7 +61,7 @@ export const generateEmail = async (req, res) => {
 
 Generate a professional email with a subject line and body.`;
 
-    const email = await generatePersonalizedEmail({}, context.companyInfo, prompt);
+    const email = await generatePersonalizedEmail(journalistInfo, context.companyInfo, prompt);
 
     const subjectMatch = email.match(/Subject:\s*(.+)/);
     const subject = subjectMatch ? subjectMatch[1].trim() : 'Follow Up';

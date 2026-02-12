@@ -43,6 +43,7 @@ export default function EmailGeneration() {
         objective: formData.objective,
         tone: formData.tone,
         length: formData.length,
+        journalistId: selectedJournalist || null,
       });
 
       setPreview({
@@ -206,7 +207,7 @@ export default function EmailGeneration() {
 
               <div className="preview-field">
                 <label>Email Body</label>
-                <textarea value={preview.body} readOnly className="body-input" rows="8" />
+                <div className="body-preview" dangerouslySetInnerHTML={{ __html: preview.body }} />
               </div>
 
               <div className="preview-actions">
