@@ -274,9 +274,7 @@ export default function SendCampaign() {
                       <div className="email-subject">
                         <strong>Subject:</strong> {email.subject}
                       </div>
-                      <div className="email-body">
-                        {email.body}
-                      </div>
+                      <div className="email-body" dangerouslySetInnerHTML={{ __html: email.body }} />
                     </div>
                   </div>
                 ))}
