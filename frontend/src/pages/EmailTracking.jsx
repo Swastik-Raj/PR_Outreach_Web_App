@@ -73,11 +73,21 @@ export default function EmailTracking() {
       }));
 
       const queued = emailsWithDetails.filter(e => e.status === 'queued');
-      const delivered = emailsWithDetails.filter(e => e.status === 'sent' || e.status === 'delivered' || e.delivered_at);
+      const bounced = emailsWithDetails.filter(e => e.bounced_at);
       const opened = emailsWithDetails.filter(e => e.opened_at);
       const clicked = emailsWithDetails.filter(e => e.clicked_at);
-      const bounced = emailsWithDetails.filter(e => e.bounced_at);
       const unsubscribed = emailsWithDetails.filter(e => e.is_unsubscribed === true);
+
+      const delivered = emailsWithDetails.filter(e =>
+        !e.bounced_at && (
+          e.delivered_at ||
+          e.opened_at ||
+          e.clicked_at ||
+          e.status === 'sent' ||
+          e.status === 'delivered' ||
+          e.status === 'opened'
+        )
+      );
 
       const totalDelivered = delivered.length;
       const openRate = totalDelivered > 0 ? ((opened.length / totalDelivered) * 100).toFixed(1) : '0';
