@@ -188,15 +188,28 @@ ${referenceContent ? `Reference Content: ${referenceContent}` : ''}
 ${companyName ? `Company: ${companyName}` : ''}
 ${companyDescription ? `Company Description: ${companyDescription}` : ''}
 
+CRITICAL REQUIREMENT - TOPIC ENFORCEMENT:
+The email MUST be specifically about AI in education and AI-powered educational tools.
+DO NOT write about any other topics like general technology, business, marketing, or unrelated AI applications.
+The email should focus EXCLUSIVELY on:
+- Artificial Intelligence applications in education
+- AI-powered learning tools and platforms
+- Educational technology powered by AI
+- How AI is transforming teaching and learning
+- AI tutoring systems, adaptive learning, or educational assistance tools
+
+If the reference content is not about AI in education, you must still create an email that connects to AI in education themes.
+
 Generate an email with:
-1. A compelling subject line (max 60 characters)
+1. A compelling subject line (max 60 characters) that relates to AI in education
 2. Professional email body following these rules:
    - Start with a personalized greeting
-   - Reference the provided context naturally
-   - Clearly state the objective
+   - Reference the provided context naturally, but steer it toward AI in education
+   - Clearly state the objective as it relates to AI educational technology
    - Include a soft call-to-action
    - End with a professional signature
    - Use the specified tone throughout
+   - STAY ON TOPIC: Every sentence must relate to AI in education
 
 Format your response EXACTLY as:
 Subject: [Your subject line]
@@ -209,7 +222,7 @@ IMPORTANT: You must include "Subject:" at the start and separate it from the bod
     const response = await getClient().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You write concise, professional PR emails. Always format responses with 'Subject:' followed by the subject line, then a blank line, then the email body." },
+        { role: "system", content: "You write concise, professional PR emails exclusively about AI in education and AI-powered educational tools. You MUST stay on topic - every email must be about artificial intelligence applications in education, AI learning tools, educational technology, or AI-powered teaching platforms. Always format responses with 'Subject:' followed by the subject line, then a blank line, then the email body. Never write about topics unrelated to AI in education." },
         { role: "user", content: prompt }
       ],
       temperature: 0.7

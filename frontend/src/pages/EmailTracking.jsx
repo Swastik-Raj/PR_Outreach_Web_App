@@ -80,9 +80,8 @@ export default function EmailTracking() {
       const unsubscribed = emailsWithDetails.filter(e => e.is_unsubscribed === true);
 
       const totalDelivered = delivered.length;
-      const openRate = totalDelivered > 0 ? ((totalDelivered / opened.length) * 100).toFixed(1) : '0';
-
-      const clickRate = opened.length > 0 ? ((clicked.length / opened.length) * 100).toFixed(1) : '0';
+      const openRate = totalDelivered > 0 ? ((opened.length / totalDelivered) * 100).toFixed(1) : '0';
+      const clickRate = totalDelivered > 0 ? ((clicked.length / totalDelivered) * 100).toFixed(1) : '0';
       const bounceRate = emailsWithDetails.length > 0 ? ((bounced.length / emailsWithDetails.length) * 100).toFixed(1) : '0';
 
       setTrackingData({
