@@ -7,7 +7,7 @@ PUBLISHERS = [
     },
     {
         "name": "Reuters",
-        "rss": "https://feeds.reuters.com/reuters/technologyNews",
+        "rss": "http://feeds.reuters.com/reuters/technologyNews",
         "domain": "reuters.com",
         "author_fields": ["author"]
     }
