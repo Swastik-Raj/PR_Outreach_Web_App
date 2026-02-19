@@ -25,7 +25,8 @@
 
 .config-section,
 .progress-section,
-.preview-section {
+.preview-section,
+.campaign-info-section {
   background: white;
   border-radius: 12px;
   padding: 2rem;
@@ -249,8 +250,79 @@
   font-weight: 500;
 }
 
-.preview-section {
+.preview-section,
+.campaign-info-section {
   grid-column: 1 / -1;
+}
+
+.campaign-status-card {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.campaign-status-card h3 {
+  font-size: 1.1rem;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.status-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.status-value.sent {
+  color: #10b981;
+}
+
+.status-value.remaining {
+  color: #f59e0b;
+}
+
+.resume-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #1e40af;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.resume-info svg {
+  flex-shrink: 0;
+  color: #3b82f6;
 }
 
 .preview-description {

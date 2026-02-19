@@ -207,11 +207,6 @@ export const sendCampaignEmails = async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    // Prevent starting an already running campaign
-    if (campaign.status === 'running') {
-      return res.status(400).json({ error: 'Campaign is already running' });
-    }
-
     // Get all queued emails for this campaign
     console.log(`[sendCampaignEmails] Looking for queued emails for campaign: ${campaignId}`);
 
@@ -239,6 +234,19 @@ export const sendCampaignEmails = async (req, res) => {
       console.log(`[sendCampaignEmails] Total emails in campaign: ${allEmails?.length || 0}`);
       if (allEmails && allEmails.length > 0) {
         console.log('[sendCampaignEmails] Email statuses:', allEmails.map(e => e.status));
+      }
+
+      const alreadySent = allEmails?.filter(e => e.status === 'sent' || e.status === 'delivered').length || 0;
+      const totalEmails = allEmails?.length || 0;
+
+      if (alreadySent >= totalEmails && totalEmails > 0) {
+        return res.status(400).json({
+          error: 'All emails in this campaign have already been sent',
+          info: {
+            totalEmails,
+            sentEmails: alreadySent
+          }
+        });
       }
 
       return res.status(400).json({

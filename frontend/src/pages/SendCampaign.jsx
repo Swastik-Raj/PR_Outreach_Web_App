@@ -39,6 +39,13 @@ export default function SendCampaign() {
     }
   }
 
+  function getCampaignStatus(campaign) {
+    if (!campaign.total_emails) return 'Not started';
+    if (campaign.sent_count === 0) return 'Ready to send';
+    if (campaign.sent_count >= campaign.total_emails) return 'Completed';
+    return `In progress (${campaign.sent_count}/${campaign.total_emails})`;
+  }
+
   async function loadEmailPreviews(campaignId) {
     setLoadingPreviews(true);
     try {
@@ -173,11 +180,14 @@ export default function SendCampaign() {
               disabled={sending}
             >
               <option value="">-- Choose a campaign --</option>
-              {campaigns.map(campaign => (
-                <option key={campaign.id} value={campaign.id}>
-                  {campaign.company} - {campaign.topic} ({campaign.total_emails || 0} contacts)
-                </option>
-              ))}
+              {campaigns.map(campaign => {
+                const status = getCampaignStatus(campaign);
+                return (
+                  <option key={campaign.id} value={campaign.id}>
+                    {campaign.company} - {campaign.topic} ({campaign.total_emails || 0} contacts) - {status}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -233,7 +243,9 @@ export default function SendCampaign() {
               disabled={!selectedCampaign || sending}
             >
               <Play size={18} />
-              Start Campaign
+              {selectedCampaign && campaigns.find(c => c.id === selectedCampaign)?.sent_count > 0
+                ? 'Resume Campaign'
+                : 'Start Campaign'}
             </button>
             <button className="btn btn-secondary" disabled={!sending}>
               <Pause size={18} />
@@ -241,6 +253,46 @@ export default function SendCampaign() {
             </button>
           </div>
         </div>
+
+        {selectedCampaign && (
+          <div className="campaign-info-section">
+            {(() => {
+              const campaign = campaigns.find(c => c.id === selectedCampaign);
+              if (!campaign) return null;
+
+              const queuedCount = emailPreviews.filter(e => e.status === 'queued').length;
+              const sentCount = campaign.sent_count || 0;
+              const totalCount = campaign.total_emails || 0;
+              const remainingCount = totalCount - sentCount;
+
+              return (
+                <div className="campaign-status-card">
+                  <h3>Campaign Status</h3>
+                  <div className="status-grid">
+                    <div className="status-item">
+                      <span className="status-label">Total Emails</span>
+                      <span className="status-value">{totalCount}</span>
+                    </div>
+                    <div className="status-item">
+                      <span className="status-label">Already Sent</span>
+                      <span className="status-value sent">{sentCount}</span>
+                    </div>
+                    <div className="status-item">
+                      <span className="status-label">Remaining</span>
+                      <span className="status-value remaining">{remainingCount}</span>
+                    </div>
+                  </div>
+                  {sentCount > 0 && remainingCount > 0 && (
+                    <div className="resume-info">
+                      <AlertCircle size={16} />
+                      <span>This campaign was interrupted. Click "Resume Campaign" to continue sending.</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {selectedCampaign && emailPreviews.length > 0 && (
           <div className="preview-section">
