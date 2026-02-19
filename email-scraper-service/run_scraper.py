@@ -90,6 +90,9 @@ def scrape_journalists_from_publishers(topic: str, geography: str = None):
         "recent_articles": []
     })
 
+    # Parse topic keywords for matching
+    topic_keywords = [kw.strip().lower() for kw in topic.split(',')]
+
     # Filter publishers by geography if specified
     publishers_to_scrape = PUBLISHERS
     if geography and geography.strip():
@@ -154,6 +157,15 @@ def scrape_journalists_from_publishers(topic: str, geography: str = None):
             continue
 
         for entry in feed.entries[:20]:
+            # Check if article matches topic keywords
+            article_title = entry.get("title", "").lower()
+            article_summary = entry.get("summary", "").lower()
+            article_text = f"{article_title} {article_summary}"
+
+            # Must match at least one keyword
+            if not any(keyword in article_text for keyword in topic_keywords):
+                continue
+
             author_raw = extract_author(entry, pub["author_fields"])
             parsed_authors = parse_name(author_raw)
 
