@@ -1,18 +1,26 @@
 import feedparser
+import requests
 from collections import defaultdict
 from publishers import PUBLISHERS
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
 
-def fetch_feed_with_timeout(rss_url, timeout=15):
-    """Fetch RSS feed with timeout support (cross-platform)"""
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(feedparser.parse, rss_url)
-        try:
-            return future.result(timeout=timeout)
-        except FutureTimeoutError:
-            raise TimeoutError(f"Feed fetch timed out after {timeout}s")
+def fetch_feed_with_timeout(rss_url, timeout=10):
+    """Fetch RSS feed with timeout support using requests"""
+    try:
+        # Use requests with timeout to fetch the feed content first
+        response = requests.get(rss_url, timeout=timeout, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        response.raise_for_status()
+
+        # Parse the fetched content with feedparser
+        return feedparser.parse(response.content)
+    except requests.Timeout:
+        raise TimeoutError(f"Feed fetch timed out after {timeout}s")
+    except requests.RequestException as e:
+        raise Exception(f"Failed to fetch feed: {str(e)}")
 
 def extract_author(entry, author_fields):
     for field in author_fields:
@@ -147,10 +155,10 @@ def scrape_journalists_from_publishers(topic: str, geography: str = None):
     for idx, pub in enumerate(publishers_to_scrape, 1):
         print(f"[{idx}/{len(publishers_to_scrape)}] Fetching RSS from {pub['name']}...")
         try:
-            feed = fetch_feed_with_timeout(pub["rss"], timeout=15)
+            feed = fetch_feed_with_timeout(pub["rss"], timeout=10)
             print(f"  Found {len(feed.entries)} articles")
         except TimeoutError:
-            print(f"  TIMEOUT after 15s - skipping {pub['name']}")
+            print(f"  TIMEOUT after 10s - skipping {pub['name']}")
             continue
         except Exception as e:
             print(f"  ERROR fetching {pub['name']}: {e}")
