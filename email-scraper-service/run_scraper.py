@@ -2,23 +2,17 @@ import feedparser
 from collections import defaultdict
 from publishers import PUBLISHERS
 from urllib.parse import urlparse
-import signal
-from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
 
-class TimeoutException(Exception):
-    pass
-
-@contextmanager
-def time_limit(seconds):
-    def signal_handler(signum, frame):
-        raise TimeoutException("Timed out!")
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        signal.alarm(0)
+def fetch_feed_with_timeout(rss_url, timeout=15):
+    """Fetch RSS feed with timeout support (cross-platform)"""
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(feedparser.parse, rss_url)
+        try:
+            return future.result(timeout=timeout)
+        except FutureTimeoutError:
+            raise TimeoutError(f"Feed fetch timed out after {timeout}s")
 
 def extract_author(entry, author_fields):
     for field in author_fields:
@@ -150,10 +144,9 @@ def scrape_journalists_from_publishers(topic: str, geography: str = None):
     for idx, pub in enumerate(publishers_to_scrape, 1):
         print(f"[{idx}/{len(publishers_to_scrape)}] Fetching RSS from {pub['name']}...")
         try:
-            with time_limit(15):
-                feed = feedparser.parse(pub["rss"])
+            feed = fetch_feed_with_timeout(pub["rss"], timeout=15)
             print(f"  Found {len(feed.entries)} articles")
-        except TimeoutException:
+        except TimeoutError:
             print(f"  TIMEOUT after 15s - skipping {pub['name']}")
             continue
         except Exception as e:
