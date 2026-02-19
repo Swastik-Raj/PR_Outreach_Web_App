@@ -131,8 +131,14 @@ def scrape_journalists_from_publishers(topic: str, geography: str = None):
                 print(f"Geography '{geography}' not recognized, using all publishers")
                 publishers_to_scrape = PUBLISHERS
 
-    for pub in publishers_to_scrape:
-        feed = feedparser.parse(pub["rss"])
+    for idx, pub in enumerate(publishers_to_scrape, 1):
+        print(f"[{idx}/{len(publishers_to_scrape)}] Fetching RSS from {pub['name']}...")
+        try:
+            feed = feedparser.parse(pub["rss"])
+            print(f"  Found {len(feed.entries)} articles")
+        except Exception as e:
+            print(f"  ERROR fetching {pub['name']}: {e}")
+            continue
 
         for entry in feed.entries[:20]:
             author_raw = extract_author(entry, pub["author_fields"])

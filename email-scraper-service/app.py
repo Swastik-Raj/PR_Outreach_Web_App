@@ -40,8 +40,8 @@ def find_email_with_hunter(first_name, last_name, domain):
     }
 
     try:
-        print(f"Searching Hunter for: {first_name} {last_name} @ {domain}")
-        res = requests.get(url, params=params, timeout=10)
+        print(f"  [{params.get('first_name', '')} {params.get('last_name', '')}] Searching Hunter @ {domain}")
+        res = requests.get(url, params=params, timeout=5)
         data = res.json()
 
         if not res.ok:
@@ -51,10 +51,10 @@ def find_email_with_hunter(first_name, last_name, domain):
         if data.get("data") and data["data"].get("email"):
             email = data["data"]["email"]
             score = data["data"].get("score", 0)
-            print(f"✓ Found: {email} (confidence: {score})")
+            print(f"    ✓ Found: {email} (score: {score})")
             return (email, score, "hunter")
         else:
-            print(f" No email found (API response: {data.get('errors', 'no data')})")
+            print(f"    ✗ Not found")
     except Exception as e:
         print(f"Hunter error for {first_name} {last_name}: {e}")
 
@@ -75,7 +75,8 @@ def scrape_journalists(topic: str = Query(...), geography: str = Query(None)):
     MIN_CONFIDENCE = 70
     stats = {"verified": 0, "low_confidence": 0, "fallback": 0, "not_found": 0}
 
-    for j in journalists:
+    print(f"\nEnriching {len(journalists)} journalists with Hunter.io...")
+    for idx, j in enumerate(journalists, 1):
         # Skip Hunter if no real author name
         if not j["first_name"] or not j["last_name"]:
             enriched.append({
