@@ -70,7 +70,7 @@ def parse_name(full_name):
     return results
 
 
-def scrape_journalists_from_publishers(topic: str):
+def scrape_journalists_from_publishers(topic: str, geography: str = None):
     journalists = defaultdict(lambda: {
         "first_name": "",
         "last_name": "",
@@ -80,7 +80,58 @@ def scrape_journalists_from_publishers(topic: str):
         "recent_articles": []
     })
 
-    for pub in PUBLISHERS:
+    # Filter publishers by geography if specified
+    publishers_to_scrape = PUBLISHERS
+    if geography and geography.strip():
+        geography_lower = geography.lower().strip()
+
+        # Map common geography terms to publisher regions
+        region_mapping = {
+            'us': ['Northeast', 'West Coast', 'National', 'Midwest', 'Southeast', 'Southwest',
+                   'Mid-Atlantic', 'Mountain West', 'Pacific Northwest'],
+            'usa': ['Northeast', 'West Coast', 'National', 'Midwest', 'Southeast', 'Southwest',
+                    'Mid-Atlantic', 'Mountain West', 'Pacific Northwest'],
+            'united states': ['Northeast', 'West Coast', 'National', 'Midwest', 'Southeast', 'Southwest',
+                              'Mid-Atlantic', 'Mountain West', 'Pacific Northwest'],
+            'northeast': ['Northeast'],
+            'west coast': ['West Coast'],
+            'east coast': ['Northeast', 'Mid-Atlantic'],
+            'national': ['National'],
+            'midwest': ['Midwest'],
+            'south': ['Southeast', 'Southwest'],
+            'southeast': ['Southeast'],
+            'southwest': ['Southwest'],
+            'mid-atlantic': ['Mid-Atlantic'],
+            'mountain west': ['Mountain West'],
+            'pacific northwest': ['Pacific Northwest'],
+            'global': None,  # None means all publishers
+            'international': ['International']
+        }
+
+        # Get matching regions
+        matching_regions = region_mapping.get(geography_lower)
+
+        if matching_regions is not None:
+            # Filter publishers by matching regions
+            publishers_to_scrape = [
+                pub for pub in PUBLISHERS
+                if pub.get('region') in matching_regions
+            ]
+            print(f"Filtered to {len(publishers_to_scrape)} publishers for geography '{geography}'")
+            print(f"Regions included: {matching_regions}")
+        else:
+            # If geography specified but not recognized, try partial match on region
+            publishers_to_scrape = [
+                pub for pub in PUBLISHERS
+                if geography_lower in pub.get('region', '').lower()
+            ]
+            if publishers_to_scrape:
+                print(f"Partial match: {len(publishers_to_scrape)} publishers for geography '{geography}'")
+            else:
+                print(f"Geography '{geography}' not recognized, using all publishers")
+                publishers_to_scrape = PUBLISHERS
+
+    for pub in publishers_to_scrape:
         feed = feedparser.parse(pub["rss"])
 
         for entry in feed.entries[:20]:

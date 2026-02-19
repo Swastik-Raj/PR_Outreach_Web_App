@@ -69,7 +69,7 @@ export const generateEmail = async (req, res) => {
 };
 
 export const startCampaign = async (req, res) => {
-  const { company, topic, senderName = "PR Team", senderTitle = "Communications" } = req.body;
+  const { company, topic, geography = '', senderName = "PR Team", senderTitle = "Communications" } = req.body;
 
   try {
     if (!process.env.SCRAPER_SERVICE_URL) {
@@ -93,9 +93,14 @@ export const startCampaign = async (req, res) => {
     const actualCompanyName = companyInfo?.company_name || company;
     console.log("Using company name for emails:", actualCompanyName);
 
-    const scraperRes = await fetch(
-      `${process.env.SCRAPER_SERVICE_URL}/scrape?topic=${encodeURIComponent(topic)}`
-    );
+    // Build scraper URL with optional geography parameter
+    let scraperUrl = `${process.env.SCRAPER_SERVICE_URL}/scrape?topic=${encodeURIComponent(topic)}`;
+    if (geography && geography.trim()) {
+      scraperUrl += `&geography=${encodeURIComponent(geography)}`;
+      console.log("Filtering publishers by geography:", geography);
+    }
+
+    const scraperRes = await fetch(scraperUrl);
 
     if (!scraperRes.ok) {
       throw new Error("Failed to fetch journalists from scraper service");

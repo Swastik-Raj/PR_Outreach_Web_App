@@ -61,12 +61,14 @@ def find_email_with_hunter(first_name, last_name, domain):
     return None, 0, "not_found"
 
 @app.get("/scrape")
-def scrape_journalists(topic: str = Query(...)):
+def scrape_journalists(topic: str = Query(...), geography: str = Query(None)):
     print(f"\n{'='*60}")
     print(f"Starting scrape for topic: {topic}")
+    if geography:
+        print(f"Filtering by geography: {geography}")
     print(f"{'='*60}\n")
 
-    journalists = scrape_journalists_from_publishers(topic)
+    journalists = scrape_journalists_from_publishers(topic, geography)
     print(f"\nFound {len(journalists)} journalists from scraper\n")
 
     enriched = []

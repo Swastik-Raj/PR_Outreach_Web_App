@@ -23,7 +23,7 @@ export default function CampaignScraper() {
       }
 
       // Call backend to start campaign (scrapes, generates emails, queues for sending)
-      const response = await api.startCampaign(campaignName, topic);
+      const response = await api.startCampaign(campaignName, topic, geography);
 
       if (response.success) {
         setCampaignCreated({

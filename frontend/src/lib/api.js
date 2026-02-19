@@ -48,8 +48,8 @@ class APIClient {
   }
 
   // Start a new campaign (scrapes, generates emails, and queues for sending)
-  async startCampaign(company, topic) {
-    return this.post('/start-campaign', { company, topic });
+  async startCampaign(company, topic, geography = '') {
+    return this.post('/start-campaign', { company, topic, geography });
   }
 
   // Get all campaigns
