@@ -75,6 +75,68 @@ export default function EmailLists() {
     }
   }
 
+  async function handleDownloadCampaign(campaignId) {
+    try {
+      const { data: emails, error } = await supabase
+        .from('emails')
+        .select('journalist:journalists(*)')
+        .eq('campaign_id', campaignId);
+
+      if (error) throw error;
+
+      const journalistsList = emails.map(item => item.journalist).filter(Boolean);
+
+      const csvContent = [
+        ['Name', 'Email', 'Publication', 'Region', 'Topics'].join(','),
+        ...journalistsList.map(j => [
+          `${j.first_name} ${j.last_name}`,
+          j.email,
+          j.publication_name || '',
+          j.region || '',
+          Array.isArray(j.topics) ? j.topics.join('; ') : (j.topics || '')
+        ].map(field => `"${field}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const list = lists.find(l => l.id === campaignId);
+      link.download = `${list?.name || 'campaign'}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download campaign:', error);
+      alert('Failed to download campaign: ' + error.message);
+    }
+  }
+
+  async function handleDeleteCampaign(campaignId) {
+    if (!confirm('Are you sure you want to delete this campaign? This will also delete all associated emails and cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await supabase
+        .from('emails')
+        .delete()
+        .eq('campaign_id', campaignId);
+
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaignId);
+
+      if (error) throw error;
+
+      await loadCampaigns();
+      alert('Campaign deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete campaign:', error);
+      alert('Failed to delete campaign: ' + error.message);
+    }
+  }
+
   async function handleFileUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -152,7 +214,7 @@ export default function EmailLists() {
               journalist_id: journalist.id,
               subject: j.subject || `Outreach - ${campaignName}`,
               body: j.body || '',
-              status: 'draft',
+              status: 'queued',
             });
         }
       }
@@ -200,7 +262,9 @@ export default function EmailLists() {
             onChange={e => setFilterStatus(e.target.value)}
           >
             <option value="all">All Statuses</option>
+            <option value="draft">Draft</option>
             <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
             <option value="archived">Archived</option>
           </select>
         </div>
@@ -264,8 +328,8 @@ export default function EmailLists() {
                 <div className="blocked">{list.blocked}</div>
                 <div><span className={`badge status-${list.status.toLowerCase()}`}>{list.status}</span></div>
                 <div className="actions" onClick={e => e.stopPropagation()}>
-                  <button title="Download"><Download size={18} /></button>
-                  <button title="Delete"><Trash2 size={18} /></button>
+                  <button title="Download" onClick={() => handleDownloadCampaign(list.id)}><Download size={18} /></button>
+                  <button title="Delete" onClick={() => handleDeleteCampaign(list.id)}><Trash2 size={18} /></button>
                 </div>
               </div>
 

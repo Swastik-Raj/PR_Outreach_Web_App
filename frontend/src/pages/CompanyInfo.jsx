@@ -19,6 +19,7 @@ export default function CompanyInfo() {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [originalData, setOriginalData] = useState(null);
 
   useEffect(() => {
     loadCompanyInfo();
@@ -35,14 +36,16 @@ export default function CompanyInfo() {
 
       if (data) {
         setCompanyId(data.id);
-        setFormData({
+        const loadedData = {
           companyName: data.company_name || '',
           description: data.description || '',
           website: data.website || '',
           industry: data.industry || '',
           targetTopics: data.target_topics || [],
           brandTone: data.brand_tone || 'Professional',
-        });
+        };
+        setFormData(loadedData);
+        setOriginalData(JSON.stringify(loadedData));
       }
     } catch (error) {
       console.error('Failed to load company info:', error);
@@ -70,8 +73,31 @@ export default function CompanyInfo() {
     setError(null);
 
     try {
+      const currentData = JSON.stringify(formData);
+      if (originalData && currentData === originalData) {
+        setError('No changes detected');
+        setLoading(false);
+        return;
+      }
+
       if (!formData.companyName.trim()) {
         throw new Error('Company name is required');
+      }
+
+      const nameRegex = /^[a-zA-Z0-9\s\-_.,&']+$/;
+      if (!nameRegex.test(formData.companyName)) {
+        throw new Error('Company name contains invalid characters');
+      }
+
+      if (formData.website && formData.website.trim()) {
+        try {
+          const url = new URL(formData.website);
+          if (!['http:', 'https:'].includes(url.protocol)) {
+            throw new Error('Invalid protocol');
+          }
+        } catch (e) {
+          throw new Error('Website must be a valid URL (e.g., https://example.com)');
+        }
       }
 
       const payload = {
@@ -103,6 +129,7 @@ export default function CompanyInfo() {
       }
 
       setSaved(true);
+      setOriginalData(JSON.stringify(formData));
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setError(err.message);

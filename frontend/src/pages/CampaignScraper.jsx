@@ -22,6 +22,11 @@ export default function CampaignScraper() {
         throw new Error('Campaign name and topic are required');
       }
 
+      const nameRegex = /^[a-zA-Z0-9\s\-_]+$/;
+      if (!nameRegex.test(campaignName)) {
+        throw new Error('Campaign name can only contain letters, numbers, spaces, hyphens, and underscores');
+      }
+
       // Call backend to start campaign (scrapes, generates emails, queues for sending)
       const response = await api.startCampaign(campaignName, topic, geography);
 

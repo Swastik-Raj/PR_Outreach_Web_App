@@ -16,6 +16,7 @@ export default function EmailGeneration() {
   const [journalists, setJournalists] = useState([]);
   const [selectedJournalist, setSelectedJournalist] = useState('');
   const [sending, setSending] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     loadJournalists();
@@ -36,6 +37,16 @@ export default function EmailGeneration() {
   }
 
   async function handleGenerate() {
+    if (!selectedJournalist) {
+      alert('Please select a journalist first');
+      return;
+    }
+
+    if (!formData.referenceContent.trim()) {
+      alert('Please provide reference content for email generation');
+      return;
+    }
+
     setGenerating(true);
     try {
       const response = await api.post('/generate-email', {
@@ -100,7 +111,11 @@ export default function EmailGeneration() {
   function handleCopyToClipboard() {
     if (!preview) return;
 
-    const emailContent = `Subject: ${preview.subject}\n\n${preview.body}`;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = preview.body;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+    const emailContent = `Subject: ${preview.subject}\n\n${plainText}`;
     navigator.clipboard.writeText(emailContent);
     alert('Email copied to clipboard!');
   }
@@ -202,15 +217,40 @@ export default function EmailGeneration() {
             <div className="preview-card">
               <div className="preview-field">
                 <label>Subject Line</label>
-                <input type="text" value={preview.subject} readOnly className="subject-input" />
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={preview.subject}
+                    onChange={e => setPreview({ ...preview, subject: e.target.value })}
+                    className="subject-input"
+                  />
+                ) : (
+                  <input type="text" value={preview.subject} readOnly className="subject-input" />
+                )}
               </div>
 
               <div className="preview-field">
                 <label>Email Body</label>
-                <div className="body-preview" dangerouslySetInnerHTML={{ __html: preview.body }} />
+                {isEditing ? (
+                  <textarea
+                    value={preview.body.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')}
+                    onChange={e => setPreview({ ...preview, body: e.target.value.replace(/\n/g, '<br>') })}
+                    rows="15"
+                    style={{ width: '100%', padding: '12px', fontSize: '14px', fontFamily: 'inherit', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                ) : (
+                  <div className="body-preview" dangerouslySetInnerHTML={{ __html: preview.body }} />
+                )}
               </div>
 
               <div className="preview-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setIsEditing(!isEditing)}
+                  disabled={sending}
+                >
+                  {isEditing ? 'Done Editing' : 'Edit'}
+                </button>
                 <button className="btn btn-secondary" onClick={handleCopyToClipboard}>
                   <Copy size={16} /> Copy
                 </button>
